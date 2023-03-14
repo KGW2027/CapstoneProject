@@ -1,9 +1,6 @@
 package org.example;
 
-import org.example.crawler.CategoryCrawler;
-import org.example.crawler.CrawlingQueue;
-import org.example.crawler.DocumentCrawler;
-import org.example.crawler.DocumentType;
+import org.example.crawler.*;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
@@ -11,6 +8,7 @@ import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
 
 import java.io.File;
+import java.io.IOException;
 
 public class WikiCrawler {
 
@@ -28,8 +26,10 @@ public class WikiCrawler {
         System.setProperty("webdriver.chrome.driver", new File(DRIVER).getAbsolutePath());
 
         ChromeOptions options = new ChromeOptions();
+        options.addArguments("headless");
         options.addArguments("--disable-popup-blocking");
         options.addArguments("--remote-allow-origins=*");
+        options.addArguments("--disable-gpu");
         driver = new ChromeDriver(options);
     }
 
@@ -82,7 +82,12 @@ public class WikiCrawler {
             } else {
                 new DocumentCrawler().call(queue, bodyText, nowURL);
             }
+        }
 
+        try {
+            DocumentList.getInstance().save();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
 
         driver.close();

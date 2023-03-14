@@ -41,6 +41,6 @@ public class CrawlingQueue {
     }
 
     public int size() {
-        return categories.size();// + documents.size();
+        return categories.size() + documents.size();
     }
 }
