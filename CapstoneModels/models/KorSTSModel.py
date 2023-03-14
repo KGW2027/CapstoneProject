@@ -8,9 +8,6 @@ from models import KorporaWrapper
 class KorSTSModel:
     def __init__(self, model, tokenizer, max_seq_len: int = 64, batch_size: int = 8, shuffle: bool = True):
         self.model = model
-        model.hidden_dropout_prob=0.1
-        model.attention_probs_drop_prob=0.1
-        model.classifier_dropout_prob=0.1
         self.tokenizer = tokenizer
         self.dataset_name = "korsts"
         corpus = KorporaWrapper.load_corpus(self.dataset_name)
