@@ -3,7 +3,9 @@
 # 그 외에 tqdm(progress_bar), Korpora(Korean dataset) 설치
 
 import torch
-from transformers import AlbertForSequenceClassification, BertTokenizerFast
+from transformers import AlbertForSequenceClassification, BertTokenizerFast, ElectraForSequenceClassification, ElectraTokenizer
+
+from models.KorNLIModel import KorNLIModel
 from models.KorSTSModel import KorSTSModel
 
 def run_sts():
@@ -14,3 +16,17 @@ def run_sts():
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=5e-6, eps=1e-8)
     sts.train(optimizer, num_epochs=10)
+
+def run_nli():
+    # https://github.com/KLUE-benchmark/KLUE#baseline-scores 를 참고한 결과
+    # base 크기에서 NLI, STS 성능이 가장 좋은 모델이 KoELECTRA 로 보이므로, KoELECTRA를 사용하여 진행
+
+    model_name = "monologg/koelectra-base-v3-discriminator"
+    model = ElectraForSequenceClassification.from_pretrained(model_name, num_labels=3)
+    tokenizer = ElectraTokenizer.from_pretrained(model_name)
+    nli = KorNLIModel(model, tokenizer)
+
+    nli.train()
+    nli.test()
+
+# run_nli()
