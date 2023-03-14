@@ -1,0 +1,15 @@
+# Python gitignore
+CapstoneModels/venv/*
+CapstoneModels/ckpt/*
+CapstoneModels/.ida/*
+CapstoneModels/datasets/*
+*.pyc
+
+# Java gitignore
+data_crawler/.gradle/*
+data_crawler/build/*
+data_crawler/gradle/*
+data_crawler/module/*
+data_crawler/out/*
+data_crawler/output/*
+data_crawler/*.txt
