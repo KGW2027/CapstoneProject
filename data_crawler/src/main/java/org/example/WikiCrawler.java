@@ -11,33 +11,31 @@ import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
 
 import java.io.File;
-import java.util.Deque;
-import java.util.LinkedList;
 
 public class WikiCrawler {
 
-    private final String DRIVER = "./module/chromedriver_win32/chromedriver.exe";
-
-    private final String URL_ROOT = "https://leagueoflegends.fandom.com/wiki/Category:Lore";
-
     private CrawlingQueue queue;
 
-    private WebDriver driver;
+    private final WebDriver driver;
+    private final long REST_TIME = 60L;
 
     public static void main(String[] args) {
         new WikiCrawler().start();
     }
 
     private WikiCrawler() {
+        String DRIVER = "./module/chromedriver_win32/chromedriver.exe";
         System.setProperty("webdriver.chrome.driver", new File(DRIVER).getAbsolutePath());
 
         ChromeOptions options = new ChromeOptions();
         options.addArguments("--disable-popup-blocking");
+        options.addArguments("--remote-allow-origins=*");
         driver = new ChromeDriver(options);
     }
 
     public void start() {
         queue = new CrawlingQueue();
+        String URL_ROOT = "https://leagueoflegends.fandom.com/wiki/Category:Lore";
         queue.add(URL_ROOT);
         crawl();
     }

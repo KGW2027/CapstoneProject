@@ -3,8 +3,6 @@ package org.example.crawler;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebElement;
 
-import java.util.Arrays;
-import java.util.Deque;
 import java.util.List;
 
 public class CategoryCrawler extends Crawler {
@@ -16,14 +14,13 @@ public class CategoryCrawler extends Crawler {
     @Override
     protected void execute(CrawlingQueue queue, WebElement body) {
 
-        System.out.println(Arrays.toString(getCategory(body)));
+        if(!isLoreCategory(body)) return;
 
         WebElement top_container = getContextContainer(body);
         List<WebElement> top_btns = top_container.findElements(By.cssSelector("a.image.link-internal"));
         for(WebElement we : top_btns){
             String new_link = we.getAttribute("href");
-            System.out.printf("NEW CATEGORY : %s\n", new_link);
-            if(new_link != null && new_link.startsWith(WIKI_PREFIX))
+            if(new_link != null && new_link.startsWith(WIKI_PREFIX) && !isBlacklistTitle(new_link))
                 queue.add(new_link);
         }
 
@@ -31,7 +28,7 @@ public class CategoryCrawler extends Crawler {
         List<WebElement> child_categories = childs.findElements(By.className("category-page__member-link"));
         for(WebElement we : child_categories) {
             String new_link = we.getAttribute("href");
-            if(new_link != null && new_link.startsWith(WIKI_PREFIX))
+            if(new_link != null && new_link.startsWith(WIKI_PREFIX) && !isBlacklistTitle(new_link))
                 queue.add(new_link);
         }
 
