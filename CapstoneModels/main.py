@@ -6,11 +6,11 @@ import torch
 from transformers import AlbertForSequenceClassification, BertTokenizerFast
 from models.KorSTSModel import KorSTSModel
 
+def run_sts():
+    model_name = "kykim/albert-kor-base"
+    model = AlbertForSequenceClassification.from_pretrained(model_name, num_labels=1)
+    tokenizer = BertTokenizerFast.from_pretrained(model_name)
+    sts = KorSTSModel(model, tokenizer, batch_size=8, shuffle=True, max_seq_len=64)
 
-model_name = "kykim/albert-kor-base"
-model = AlbertForSequenceClassification.from_pretrained(model_name, num_labels=1)
-tokenizer = BertTokenizerFast.from_pretrained(model_name)
-sts = KorSTSModel(model, tokenizer, batch_size=8, shuffle=True, max_seq_len=64)
-
-optimizer = torch.optim.AdamW(model.parameters(), lr=5e-6, eps=1e-8)
-sts.train(optimizer, num_epochs=10)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=5e-6, eps=1e-8)
+    sts.train(optimizer, num_epochs=10)
