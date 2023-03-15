@@ -31,7 +31,7 @@ public class UniverseKoSearcher extends CrawlingSearcher {
         }
 
         // 문서 정보 획득
-        String[] descs = inner.split("(?=<h[1-2]>)");
-        body.addCrawlingData(docName, parseTexts(descs));
+//        String[] descs = inner.split("(?=<h[1-2]>)");
+        body.addCrawlingData(docName, parseTexts(new String[]{inner}));
     }
 }
