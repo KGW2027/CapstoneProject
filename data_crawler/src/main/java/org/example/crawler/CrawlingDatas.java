@@ -8,18 +8,18 @@ import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
 import java.io.*;
-import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
 
 public class CrawlingDatas extends HashMap<String, CrawlingData> {
 
-    private String title;
+    private String title, fileName;
     private final String FILE_PARENT = "./data/{title}/{text}.json";
 
     public CrawlingDatas(String title) {
         this.title = title;
+        this.fileName = "";
     }
 
     private String makeJson() {
@@ -35,10 +35,11 @@ public class CrawlingDatas extends HashMap<String, CrawlingData> {
         return gson.toJson(ge);
     }
 
-    public void save(String name) throws IOException {
-        String dir = FILE_PARENT.replace("{title}", title).replace("{text}", name);
+    public void save() throws IOException {
+        if(fileName.equals("")) fileName = "save_ckpt";
+        String dir = FILE_PARENT.replace("{title}", title).replace("{text}", fileName);
         File file = new File(dir);
-        file.mkdir();
+        if(!file.getParentFile().exists()) file.getParentFile().mkdirs();
         if(!file.exists()) file.createNewFile();
 
         BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file)));
@@ -47,9 +48,22 @@ public class CrawlingDatas extends HashMap<String, CrawlingData> {
         writer.close();
     }
 
-    public void saveWithDate() throws IOException {
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd-saves");
-        save(sdf.format(new Date()));
+    private void append(String text) {
+        if(fileName.equals("")) fileName = text;
+        else fileName = fileName + "-" + text;
+    }
+
+    public void clearName() {
+        fileName = "";
+    }
+
+    public void appendDate() {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss");
+        append(sdf.format(new Date()));
+    }
+
+    public void appendNum(int num) {
+        append(String.format("%04d", num));
     }
 
 

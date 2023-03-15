@@ -11,6 +11,8 @@ import org.openqa.selenium.support.ui.WebDriverWait;
 import java.io.File;
 import java.io.IOException;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 
 public class CrawlerBody {
 
@@ -19,6 +21,7 @@ public class CrawlerBody {
     private CrawlingDatas cDatas;
     private CrawlingQueue queue;
     private CrawlingSearcher searcher;
+    private List<String> blacklists;
     private String waitCss, name;
 
     public CrawlerBody(String name, String urlPrefix, CrawlingQueue queue, CrawlingSearcher searcher) {
@@ -28,6 +31,7 @@ public class CrawlerBody {
         this.queue = queue;
         this.searcher = searcher.setBody(this);
         this.waitCss = "";
+        this.blacklists = new ArrayList<>();
 
         this.queue.addQueue(URL_PREFIX);
         this.searcher.addExpectPrefix(URL_PREFIX);
@@ -48,6 +52,16 @@ public class CrawlerBody {
         return this;
     }
 
+    public CrawlerBody addQueueManually(String url) {
+        this.queue.addQueue(url.toLowerCase());
+        return this;
+    }
+
+    public CrawlerBody addBlacklist(String blacklist) {
+        this.blacklists.add(blacklist);
+        return this;
+    }
+
     public void addCrawlingData(String docName, CrawlingData data) {
         cDatas.put(docName, data);
     }
@@ -57,9 +71,12 @@ public class CrawlerBody {
         while(!queue.isEmpty()) {
             if(attempt % 100 == 0) {
                 try {
-                    cDatas.save(name);
+                    cDatas.clearName();
+                    cDatas.appendDate();
+                    cDatas.appendNum(attempt);
+                    cDatas.save();
                 } catch (IOException e) {
-                    System.out.printf("[저장 중 에러가 발생했습니다. :: %s]", e.getMessage());
+                    System.out.printf("[저장 중 에러가 발생했습니다. :: %s]\n", e.getMessage());
                 }
             }
 
@@ -86,10 +103,25 @@ public class CrawlerBody {
             System.out.printf("현재 Queue size => [PRE] %d [POST] %d\n", queue.size()[0], queue.size()[1]);
         }
 
+        cDatas.clearName();
+        cDatas.appendDate();
+        cDatas.appendNum(attempt);
+        try {
+            cDatas.save();
+        } catch (IOException e) {
+            System.out.printf("[최종 저장 중 에러가 발생했습니다.ㅠㅠ :: %s]\n", e.getMessage());
+        }
+
         driver.close();
     }
 
+    private boolean isBlacklist(String url) {
+        for(String blacklist : blacklists)
+            if(url.contains(blacklist)) return true;
+        return false;
+    }
+
     private boolean isTargetDocs(String url) {
-        return url.toLowerCase().startsWith(URL_PREFIX);
+        return url.toLowerCase().startsWith(URL_PREFIX) && !isBlacklist(url);
     }
 }

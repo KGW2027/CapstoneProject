@@ -9,6 +9,9 @@ public class UniverseKoCrawler {
         CrawlingQueue queue = new UniverseKoQueue();
         new CrawlerBody("univ_ko", prefix, queue, new UniverseKoSearcher())
                 .setWaitCss("div.pageLoaded.hidden")
+                .addQueueManually("/champions/")
+                .addQueueManually("/regions/")
+                .addBlacklist("comic")
                 .start();
     }
 }
