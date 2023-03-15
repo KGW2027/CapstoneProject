@@ -1,4 +1,4 @@
-package org.example.crawler;
+package org.example.crawler.fandomen;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -11,18 +11,18 @@ import java.io.*;
 import java.util.HashMap;
 import java.util.List;
 
-public class DocumentList {
+public class FandomEnDocumentList {
 
-    private static DocumentList instance;
+    private static FandomEnDocumentList instance;
 
-    public static DocumentList getInstance() {
-        return instance == null ? instance = new DocumentList() : instance;
+    public static FandomEnDocumentList getInstance() {
+        return instance == null ? instance = new FandomEnDocumentList() : instance;
     }
 
     private HashMap<String, HashMap<String, List<String>>> results;
-    private final String FILE_PATH = "data/lolwiki_{size}.json";
+    private final String FILE_PATH = "data/FandomEn/lolwiki_{size}.json";
 
-    private DocumentList() {
+    private FandomEnDocumentList() {
         results = new HashMap<>();
     }
 

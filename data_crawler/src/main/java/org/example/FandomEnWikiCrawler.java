@@ -1,7 +1,7 @@
 package org.example;
 
-import org.example.crawler.*;
 import org.example.crawler.exception.NotFoundContainerException;
+import org.example.crawler.fandomen.*;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
@@ -12,19 +12,19 @@ import java.io.File;
 import java.io.IOException;
 import java.time.Duration;
 
-public class WikiCrawler {
+public class FandomEnWikiCrawler {
 
-    private CrawlingQueue queue;
+    private FandomEnCrawlingQueue queue;
 
     private final WebDriver driver;
     private final long TIMEOUT = 10L;
     private final long REST_TIME = 60L;
 
     public static void main(String[] args) {
-        new WikiCrawler().start();
+        new FandomEnWikiCrawler().start();
     }
 
-    private WikiCrawler() {
+    private FandomEnWikiCrawler() {
         String DRIVER = "./module/chromedriver_win32/chromedriver.exe";
         System.setProperty("webdriver.chrome.driver", new File(DRIVER).getAbsolutePath());
 
@@ -37,7 +37,7 @@ public class WikiCrawler {
     }
 
     public void start() {
-        queue = new CrawlingQueue();
+        queue = new FandomEnCrawlingQueue();
         String URL_ROOT = "https://leagueoflegends.fandom.com/wiki/Category:Lore";
         queue.add(URL_ROOT);
         crawl();
@@ -71,8 +71,8 @@ public class WikiCrawler {
             String nowURL = queue.poll();
             System.out.printf("[Attempt %d] %s / %d\n", ++documents, nowURL, queue.size());
 
-            DocumentType docType = DocumentType.getType(nowURL);
-            if(docType != DocumentType.Category && docType != DocumentType.Document) {
+            FandomEnDocumentType docType = FandomEnDocumentType.getType(nowURL);
+            if(docType != FandomEnDocumentType.Category && docType != FandomEnDocumentType.Document) {
                 System.out.printf("URL [%s]는 분류되지 않은 카테고리입니다.\n", nowURL);
                 continue;
             }
@@ -88,10 +88,10 @@ public class WikiCrawler {
             WebElement bodyText = driver.findElement(By.tagName("body"));
 
             try {
-                if (docType == DocumentType.Category) {
-                    new CategoryCrawler().call(queue, bodyText, nowURL);
+                if (docType == FandomEnDocumentType.Category) {
+                    new FandomEnCategoryCrawler().call(queue, bodyText, nowURL);
                 } else {
-                    new DocumentCrawler().call(queue, bodyText, nowURL);
+                    new FandomEnDocumentCrawler().call(queue, bodyText, nowURL);
                 }
             } catch(NotFoundContainerException ex) {
                 System.out.printf("SKIPPED %s\n", nowURL);
@@ -99,7 +99,7 @@ public class WikiCrawler {
         }
 
         try {
-            DocumentList.getInstance().save();
+            FandomEnDocumentList.getInstance().save();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

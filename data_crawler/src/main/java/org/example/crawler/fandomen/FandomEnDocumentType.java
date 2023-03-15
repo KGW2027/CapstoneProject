@@ -1,6 +1,6 @@
-package org.example.crawler;
+package org.example.crawler.fandomen;
 
-public enum DocumentType {
+public enum FandomEnDocumentType {
     Category("Category", false),
     Document("", true),
     Template("Template", false),
@@ -10,17 +10,17 @@ public enum DocumentType {
     String prefix;
     boolean isDocument;
 
-    DocumentType(String prefix, boolean isDocs) {
+    FandomEnDocumentType(String prefix, boolean isDocs) {
         this.prefix = prefix;
         this.isDocument = isDocs;
     }
 
-    public static DocumentType getType(String url){
+    public static FandomEnDocumentType getType(String url){
         int lastSeperator = url.lastIndexOf('/');
         url = url.substring(lastSeperator+1);
         if(url.indexOf(':') < 0) return Document;
 
-        for(DocumentType dt : values()) {
+        for(FandomEnDocumentType dt : values()) {
             if(dt == Document) continue;
             if(url.startsWith(dt.prefix)) return dt;
         }

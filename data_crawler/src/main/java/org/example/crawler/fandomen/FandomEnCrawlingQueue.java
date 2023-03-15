@@ -1,15 +1,15 @@
-package org.example.crawler;
+package org.example.crawler.fandomen;
 
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Queue;
 
-public class CrawlingQueue {
+public class FandomEnCrawlingQueue {
 
     Queue<String> categories, documents;
     HashSet<String> v_cat, v_docs;
 
-    public CrawlingQueue() {
+    public FandomEnCrawlingQueue() {
         categories = new LinkedList<>();
         documents = new LinkedList<>();
         v_cat = new HashSet<>();
@@ -17,8 +17,8 @@ public class CrawlingQueue {
     }
 
     public void add(String url) {
-        DocumentType docType = DocumentType.getType(url);
-        if(docType == DocumentType.Category) {
+        FandomEnDocumentType docType = FandomEnDocumentType.getType(url);
+        if(docType == FandomEnDocumentType.Category) {
             if(v_cat.contains(url)) return;
             v_cat.add(url);
             categories.add(url);

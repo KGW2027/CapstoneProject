@@ -1,4 +1,4 @@
-package org.example.crawler;
+package org.example.crawler.fandomen;
 
 import org.example.crawler.exception.NotFoundContainerException;
 import org.openqa.selenium.By;
@@ -6,9 +6,9 @@ import org.openqa.selenium.WebElement;
 
 import java.util.List;
 
-public abstract class Crawler {
-    protected abstract void execute(CrawlingQueue queue, WebElement body) throws NotFoundContainerException;
-    public void call(CrawlingQueue queue, WebElement body, String url) throws NotFoundContainerException {
+public abstract class FandomEnCrawler {
+    protected abstract void execute(FandomEnCrawlingQueue queue, WebElement body) throws NotFoundContainerException;
+    public void call(FandomEnCrawlingQueue queue, WebElement body, String url) throws NotFoundContainerException {
         int lastSep = url.lastIndexOf('/');
         docName = url.substring(lastSep+1);
         execute(queue, body);
@@ -61,10 +61,10 @@ public abstract class Crawler {
         String[] categories = getCategory(body);
         if(docName.startsWith("Category")) {
             String thisCategory = docName.split(":")[1];
-            return Categories.getInstance().addCategory(thisCategory, categories);
+            return FandomEnCategories.getInstance().addCategory(thisCategory, categories);
         }
 
-        return Categories.getInstance().validLore(categories);
+        return FandomEnCategories.getInstance().validLore(categories);
     }
 
     protected boolean isBlacklistTitle(String url) {
