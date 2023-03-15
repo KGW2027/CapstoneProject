@@ -1,4 +1,4 @@
-package org.example.crawler;
+package org.example.crawler.fandomen;
 
 import org.example.crawler.exception.NotFoundContainerException;
 import org.jsoup.Jsoup;
@@ -7,11 +7,10 @@ import org.jsoup.select.Elements;
 import org.openqa.selenium.WebElement;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
-public class DocumentCrawler extends Crawler {
+public class FandomEnDocumentCrawler extends FandomEnCrawler {
     private final String[] BLACKLIST_TITLE = {
             "References", "Media", "See also", "Recipe", "Change log", "Categories", "Languages", "Read More"
     };
@@ -19,7 +18,7 @@ public class DocumentCrawler extends Crawler {
     HashMap<String, List<String>> contextMap;
 
     @Override
-    protected void execute(CrawlingQueue queue, WebElement body) throws NotFoundContainerException {
+    protected void execute(FandomEnCrawlingQueue queue, WebElement body) throws NotFoundContainerException {
 
         contextMap = new HashMap<>();
 
@@ -34,7 +33,7 @@ public class DocumentCrawler extends Crawler {
             contextMap.put(title, parseContext(split[1]));
         }
 
-        DocumentList.getInstance().addDocument(docName, contextMap);
+        FandomEnDocumentList.getInstance().addDocument(docName, contextMap);
     }
 
     private List<String> parseContext(String context) {

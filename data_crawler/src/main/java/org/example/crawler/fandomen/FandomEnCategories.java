@@ -1,10 +1,10 @@
-package org.example.crawler;
+package org.example.crawler.fandomen;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
-public class Categories {
+public class FandomEnCategories {
 
     enum ValidateLore {
         Unchecked,
@@ -33,15 +33,15 @@ public class Categories {
         }
     }
 
-    private static Categories instance;
-    public static Categories getInstance() {
-        return (instance == null) ? (instance = new Categories()) : instance;
+    private static FandomEnCategories instance;
+    public static FandomEnCategories getInstance() {
+        return (instance == null) ? (instance = new FandomEnCategories()) : instance;
     }
 
     List<Category> categories;
     HashMap<String, Integer> categoryMap;
 
-    private Categories() {
+    private FandomEnCategories() {
         categoryMap = new HashMap<>();
         categories = new ArrayList<>();
 
