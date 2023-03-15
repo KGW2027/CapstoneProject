@@ -31,8 +31,8 @@ public class CrawlingQueue {
     }
 
     public String poll() {
+        // 카테고리 문서는 총 707개, 크롤링 대상 문서는 4140개
         if(categories.size() > 0) return categories.poll();
-        System.out.println(Categories.getInstance().categoryMap.size());
         return documents.poll();
     }
 

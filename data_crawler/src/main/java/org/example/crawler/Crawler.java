@@ -6,8 +6,8 @@ import org.openqa.selenium.WebElement;
 import java.util.List;
 
 public abstract class Crawler {
-    protected abstract void execute(CrawlingQueue queue, WebElement body);
-    public void call(CrawlingQueue queue, WebElement body, String url) {
+    protected abstract void execute(CrawlingQueue queue, WebElement body) throws NotFoundContainerException;
+    public void call(CrawlingQueue queue, WebElement body, String url) throws NotFoundContainerException {
         int lastSep = url.lastIndexOf('/');
         docName = url.substring(lastSep+1);
         execute(queue, body);
@@ -17,14 +17,13 @@ public abstract class Crawler {
     private final String CATEGORIES_CLASS = "category-page__members";
     protected final String[] CATEGORY_BLACK_LIST = {
             "comics", "tabletop", "audio", "videos", "images", "icon", "voice-over", "chroma", "tile",
-            "loading", "skin", "circle", "square"
+            "loading", "skin", "circle", "square", "items"
     };
 
     protected final String WIKI_PREFIX = "https://leagueoflegends.fandom.com/wiki/";
 
     protected String docName;
 
-    protected WebElement getContextContainer(WebElement body) {
         List<WebElement> div = body.findElements(By.className(CONTAINER_CLASS));
         if(div.size() > 1) {
             System.out.println("mw-parser-output이 " + div.size() + "개 인 문서가 존재함.");
@@ -32,7 +31,6 @@ public abstract class Crawler {
         return div.get(0);
     }
 
-    protected WebElement getChildCategories(WebElement body) {
         List<WebElement> div = body.findElements(By.className(CATEGORIES_CLASS));
         if(div.size() > 1) {
             System.out.println("category-page__members이 " + div.size() + "개 인 문서가 존재함.");

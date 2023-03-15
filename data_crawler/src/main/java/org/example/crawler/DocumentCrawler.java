@@ -1,5 +1,6 @@
 package org.example.crawler;
 
+import org.example.crawler.exception.NotFoundContainerException;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
@@ -12,15 +13,12 @@ import java.util.List;
 
 public class DocumentCrawler extends Crawler {
     private final String[] BLACKLIST_TITLE = {
-            "References",
+            "References", "Media", "See also", "Recipe", "Change log", "Categories", "Languages", "Read More"
     };
 
     HashMap<String, List<String>> contextMap;
 
     @Override
-    protected void execute(CrawlingQueue queue, WebElement body) {
-
-//        if(!isLoreCategory(body)) return;
 
         contextMap = new HashMap<>();
 
