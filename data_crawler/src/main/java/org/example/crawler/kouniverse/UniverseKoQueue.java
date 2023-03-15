@@ -10,8 +10,13 @@ public class UniverseKoQueue extends CrawlingQueue {
 
     @Override
     protected String preprocess(String url) {
+
         url = url.startsWith("/ko_kr") ? url.replace("/ko_kr", "") : url;
         String result = "https://universe.leagueoflegends.com/ko_kr" + url;
+
+        if(!result.endsWith("/")) result += '/';
+        if(result.endsWith("//")) result = result.substring(0, result.length()-1);
+
         return result;
     }
 

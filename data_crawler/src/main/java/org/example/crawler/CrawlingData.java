@@ -7,11 +7,9 @@ import java.util.List;
 
 public class CrawlingData {
 
-    private String docName;
     private HashMap<String, List<String>> contexts;
 
-    public CrawlingData(String docName) {
-        this.docName = docName;
+    public CrawlingData() {
         contexts = new HashMap<>();
     }
 
