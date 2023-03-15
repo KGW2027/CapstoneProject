@@ -1,6 +1,7 @@
 package org.example;
 
 import org.example.crawler.*;
+import org.example.crawler.exception.NotFoundContainerException;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
@@ -9,12 +10,14 @@ import org.openqa.selenium.chrome.ChromeOptions;
 
 import java.io.File;
 import java.io.IOException;
+import java.time.Duration;
 
 public class WikiCrawler {
 
     private CrawlingQueue queue;
 
     private final WebDriver driver;
+    private final long TIMEOUT = 10L;
     private final long REST_TIME = 60L;
 
     public static void main(String[] args) {
@@ -73,14 +76,25 @@ public class WikiCrawler {
                 System.out.printf("URL [%s]는 분류되지 않은 카테고리입니다.\n", nowURL);
                 continue;
             }
-            driver.get(nowURL);
+
+            try {
+                driver.manage().timeouts().pageLoadTimeout(Duration.ofSeconds(TIMEOUT));
+                driver.get(nowURL);
+            } catch (Exception timeout) {
+                System.out.printf("[Document %s] 시간초과되어 다음 문서로 스킵됩니다. (%s)\n", nowURL, timeout.getMessage());
+                continue;
+            }
 
             WebElement bodyText = driver.findElement(By.tagName("body"));
 
-            if (docType == DocumentType.Category) {
-                new CategoryCrawler().call(queue, bodyText, nowURL);
-            } else {
-                new DocumentCrawler().call(queue, bodyText, nowURL);
+            try {
+                if (docType == DocumentType.Category) {
+                    new CategoryCrawler().call(queue, bodyText, nowURL);
+                } else {
+                    new DocumentCrawler().call(queue, bodyText, nowURL);
+                }
+            } catch(NotFoundContainerException ex) {
+                System.out.printf("SKIPPED %s\n", nowURL);
             }
         }
 

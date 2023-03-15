@@ -19,6 +19,7 @@ public class DocumentCrawler extends Crawler {
     HashMap<String, List<String>> contextMap;
 
     @Override
+    protected void execute(CrawlingQueue queue, WebElement body) throws NotFoundContainerException {
 
         contextMap = new HashMap<>();
 

@@ -1,5 +1,6 @@
 package org.example.crawler;
 
+import org.example.crawler.exception.NotFoundContainerException;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebElement;
 
@@ -24,17 +25,21 @@ public abstract class Crawler {
 
     protected String docName;
 
+    protected WebElement getContextContainer(WebElement body) throws NotFoundContainerException {
         List<WebElement> div = body.findElements(By.className(CONTAINER_CLASS));
         if(div.size() > 1) {
             System.out.println("mw-parser-output이 " + div.size() + "개 인 문서가 존재함.");
         }
+        if(div.size() == 0) throw new NotFoundContainerException(docName);
         return div.get(0);
     }
 
+    protected WebElement getChildCategories(WebElement body) throws NotFoundContainerException {
         List<WebElement> div = body.findElements(By.className(CATEGORIES_CLASS));
         if(div.size() > 1) {
             System.out.println("category-page__members이 " + div.size() + "개 인 문서가 존재함.");
         }
+        if(div.size() == 0) throw new NotFoundContainerException(docName);
         return div.get(0);
     }
 

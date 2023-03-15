@@ -1,5 +1,6 @@
 package org.example.crawler;
 
+import org.example.crawler.exception.NotFoundContainerException;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebElement;
 
@@ -12,7 +13,7 @@ public class CategoryCrawler extends Crawler {
 // * *  2-3-1) prefix가 Category: 라면 Deque의 뒤에 추가한다.
 // * *  2-3-2) prefix가 File: 라면 무시한다.
     @Override
-    protected void execute(CrawlingQueue queue, WebElement body) {
+    protected void execute(CrawlingQueue queue, WebElement body) throws NotFoundContainerException {
 
         if(!isLoreCategory(body)) return;
 
