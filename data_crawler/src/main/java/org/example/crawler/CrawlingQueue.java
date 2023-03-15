@@ -1,27 +1,37 @@
 package org.example.crawler;
 
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Queue;
 
 public class CrawlingQueue {
 
     Queue<String> categories, documents;
+    HashSet<String> v_cat, v_docs;
 
     public CrawlingQueue() {
         categories = new LinkedList<>();
         documents = new LinkedList<>();
+        v_cat = new HashSet<>();
+        v_docs = new HashSet<>();
     }
 
     public void add(String url) {
         DocumentType docType = DocumentType.getType(url);
-        switch(docType) {
-            case Category -> categories.add(url);
-            case Document -> documents.add(url);
-            default -> System.out.printf("URL [%s]는 분류되지 않은 카테고리입니다.\n", url);
+        if(docType == DocumentType.Category) {
+            if(v_cat.contains(url)) return;
+            v_cat.add(url);
+            categories.add(url);
+        }
+        else if(docType.isDocument) {
+            if (v_docs.contains(url)) return;
+            v_docs.add(url);
+            documents.add(url);
         }
     }
 
     public String poll() {
+        // 카테고리 문서는 총 707개, 크롤링 대상 문서는 4140개
         if(categories.size() > 0) return categories.poll();
         return documents.poll();
     }

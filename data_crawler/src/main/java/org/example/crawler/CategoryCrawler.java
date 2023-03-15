@@ -1,10 +1,9 @@
 package org.example.crawler;
 
+import org.example.crawler.exception.NotFoundContainerException;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebElement;
 
-import java.util.Arrays;
-import java.util.Deque;
 import java.util.List;
 
 public class CategoryCrawler extends Crawler {
@@ -14,16 +13,15 @@ public class CategoryCrawler extends Crawler {
 // * *  2-3-1) prefix가 Category: 라면 Deque의 뒤에 추가한다.
 // * *  2-3-2) prefix가 File: 라면 무시한다.
     @Override
-    protected void execute(CrawlingQueue queue, WebElement body) {
+    protected void execute(CrawlingQueue queue, WebElement body) throws NotFoundContainerException {
 
-        System.out.println(Arrays.toString(getCategory(body)));
+        if(!isLoreCategory(body)) return;
 
         WebElement top_container = getContextContainer(body);
         List<WebElement> top_btns = top_container.findElements(By.cssSelector("a.image.link-internal"));
         for(WebElement we : top_btns){
             String new_link = we.getAttribute("href");
-            System.out.printf("NEW CATEGORY : %s\n", new_link);
-            if(new_link != null && new_link.startsWith(WIKI_PREFIX))
+            if(new_link != null && new_link.startsWith(WIKI_PREFIX) && !isBlacklistTitle(new_link))
                 queue.add(new_link);
         }
 
@@ -31,7 +29,7 @@ public class CategoryCrawler extends Crawler {
         List<WebElement> child_categories = childs.findElements(By.className("category-page__member-link"));
         for(WebElement we : child_categories) {
             String new_link = we.getAttribute("href");
-            if(new_link != null && new_link.startsWith(WIKI_PREFIX))
+            if(new_link != null && new_link.startsWith(WIKI_PREFIX) && !isBlacklistTitle(new_link))
                 queue.add(new_link);
         }
 

@@ -1,9 +1,7 @@
 package org.example;
 
-import org.example.crawler.CategoryCrawler;
-import org.example.crawler.CrawlingQueue;
-import org.example.crawler.DocumentCrawler;
-import org.example.crawler.DocumentType;
+import org.example.crawler.*;
+import org.example.crawler.exception.NotFoundContainerException;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
@@ -11,33 +9,36 @@ import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
 
 import java.io.File;
-import java.util.Deque;
-import java.util.LinkedList;
+import java.io.IOException;
+import java.time.Duration;
 
 public class WikiCrawler {
 
-    private final String DRIVER = "./module/chromedriver_win32/chromedriver.exe";
-
-    private final String URL_ROOT = "https://leagueoflegends.fandom.com/wiki/Category:Lore";
-
     private CrawlingQueue queue;
 
-    private WebDriver driver;
+    private final WebDriver driver;
+    private final long TIMEOUT = 10L;
+    private final long REST_TIME = 60L;
 
     public static void main(String[] args) {
         new WikiCrawler().start();
     }
 
     private WikiCrawler() {
+        String DRIVER = "./module/chromedriver_win32/chromedriver.exe";
         System.setProperty("webdriver.chrome.driver", new File(DRIVER).getAbsolutePath());
 
         ChromeOptions options = new ChromeOptions();
+        options.addArguments("headless");
         options.addArguments("--disable-popup-blocking");
+        options.addArguments("--remote-allow-origins=*");
+        options.addArguments("--disable-gpu");
         driver = new ChromeDriver(options);
     }
 
     public void start() {
         queue = new CrawlingQueue();
+        String URL_ROOT = "https://leagueoflegends.fandom.com/wiki/Category:Lore";
         queue.add(URL_ROOT);
         crawl();
     }
@@ -75,16 +76,32 @@ public class WikiCrawler {
                 System.out.printf("URL [%s]는 분류되지 않은 카테고리입니다.\n", nowURL);
                 continue;
             }
-            driver.get(nowURL);
+
+            try {
+                driver.manage().timeouts().pageLoadTimeout(Duration.ofSeconds(TIMEOUT));
+                driver.get(nowURL);
+            } catch (Exception timeout) {
+                System.out.printf("[Document %s] 시간초과되어 다음 문서로 스킵됩니다. (%s)\n", nowURL, timeout.getMessage());
+                continue;
+            }
 
             WebElement bodyText = driver.findElement(By.tagName("body"));
 
-            if (docType == DocumentType.Category) {
-                new CategoryCrawler().call(queue, bodyText, nowURL);
-            } else {
-                new DocumentCrawler().call(queue, bodyText, nowURL);
+            try {
+                if (docType == DocumentType.Category) {
+                    new CategoryCrawler().call(queue, bodyText, nowURL);
+                } else {
+                    new DocumentCrawler().call(queue, bodyText, nowURL);
+                }
+            } catch(NotFoundContainerException ex) {
+                System.out.printf("SKIPPED %s\n", nowURL);
             }
+        }
 
+        try {
+            DocumentList.getInstance().save();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
 
         driver.close();
