@@ -3,27 +3,12 @@ package org.example.translator.processors;
 import org.example.translator.CrawlDataProcessor;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
-import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
-import java.io.BufferedReader;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.util.*;
 
 public class FandomJSONParser extends CrawlDataProcessor {
-
-    private String readFile() throws IOException {
-        String target = "./data/FandomEn/lolwiki_2574.json";
-        BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(target)));
-
-        StringBuilder read = new StringBuilder();
-        String line;
-        while( (line = br.readLine()) != null) read.append(line);
-        br.close();
-        return read.toString();
-    }
 
     private final String[] except_categories = {
         "turrets", "summoner", "event", "daily", "teamfight tactics", "co-op vs", "login", "shop", "milestones", "runes", "when ten", "announcements", "upgrade"
@@ -52,7 +37,7 @@ public class FandomJSONParser extends CrawlDataProcessor {
 
     @Override
     public void process(HashSet<String> texts) throws ParseException, IOException {
-        JSONArray json = (JSONArray) new JSONParser().parse(readFile());
+        JSONArray json = readSource();
 
         HashSet<String> categories = new HashSet<>();
         HashMap<String, SetData> map = new HashMap<>();
@@ -113,5 +98,10 @@ public class FandomJSONParser extends CrawlDataProcessor {
     @Override
     public String getDirectoryName() {
         return "FandomEnTranslated";
+    }
+
+    @Override
+    public String getSrcPath() {
+        return "./data/FandomEn/lolwiki_2574.json";
     }
 }
