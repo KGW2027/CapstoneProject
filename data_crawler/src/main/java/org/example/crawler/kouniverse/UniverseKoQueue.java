@@ -11,8 +11,10 @@ public class UniverseKoQueue extends CrawlingQueue {
     @Override
     protected String preprocess(String url) {
 
-        url = url.startsWith("/ko_kr") ? url.replace("/ko_kr", "") : url;
-        String result = "https://universe.leagueoflegends.com/ko_kr" + url;
+//        url = url.startsWith("/ko_kr") ? url.replace("/ko_kr", "") : url;
+//        String result = "https://universe.leagueoflegends.com/ko_kr" + url;
+        url = url.startsWith("/en_us") ? url.replace("/en_us", "") : url;
+        String result = "https://universe.leagueoflegends.com/en_us" + url;
 
         if(!result.endsWith("/")) result += '/';
         if(result.endsWith("//")) result = result.substring(0, result.length()-1);
@@ -22,7 +24,8 @@ public class UniverseKoQueue extends CrawlingQueue {
 
     @Override
     public boolean isPreSearch(String url) {
-        String replaced = url.replace("https://universe.leagueoflegends.com/ko_kr", "");
+//        String replaced = url.replace("https://universe.leagueoflegends.com/ko_kr", "");
+        String replaced = url.replace("https://universe.leagueoflegends.com/en_us", "");
         return replaced.split("/").length < 3;
     }
 }
