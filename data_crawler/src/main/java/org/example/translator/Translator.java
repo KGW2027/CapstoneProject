@@ -26,6 +26,7 @@ public class Translator {
         new Translator()
                 .setStartLanguage(Language.ENGLISH)
                 .setEndLanguage(Language.KOREAN)
+                .initTexts(new FandomJSONParser())
                 .setAutosaveTerm(100)
                 .translate();
     }
