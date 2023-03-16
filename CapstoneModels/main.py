@@ -7,6 +7,7 @@ from transformers import AlbertForSequenceClassification, BertTokenizerFast, Ele
 
 from models.KorNLIModel import KorNLIModel
 from models.KorSTSModel import KorSTSModel
+from models.GameModel01 import GameLolModel_t1
 
 def run_sts():
     model_name = "kykim/albert-kor-base"
@@ -29,4 +30,11 @@ def run_nli():
     nli.train()
     nli.test()
 
+def run_lol01():
+    model_name = "monologg/koelectra-base-v3-discriminator"
+    tokenizer = ElectraTokenizer.from_pretrained(model_name)
+    lol01 = GameLolModel_t1(tokenizer)
+
+
+run_lol01()
 # run_nli()
