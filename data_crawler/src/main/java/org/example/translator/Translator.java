@@ -5,7 +5,7 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import org.example.ChromeDriver;
-import org.example.translator.processors.FandomJSONParser;
+import org.example.translator.processors.UniverseParser;
 import org.json.simple.JSONArray;
 import org.json.simple.parser.ParseException;
 import org.openqa.selenium.By;
@@ -13,7 +13,6 @@ import org.openqa.selenium.TimeoutException;
 import org.openqa.selenium.WebElement;
 
 import java.io.*;
-import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -26,9 +25,11 @@ public class Translator {
         new Translator()
                 .setStartLanguage(Language.ENGLISH)
                 .setEndLanguage(Language.KOREAN)
-                .initTexts(new FandomJSONParser())
+//                .initTexts(new FandomJSONParser())
+                .initTexts(new UniverseParser())
                 .setAutosaveTerm(100)
-                .translate();
+                .translate()
+        ;
     }
 
     private final String Translator_URL = "https://translate.google.co.kr/?sl={START}&tl={END}&text={TEXT}&op=translate";
@@ -44,7 +45,8 @@ public class Translator {
                 .setTimeout(10L)
                 .setWait(By.className("ryNqvb"))
                 .enableHeadlessMode()
-                .init();
+                .init()
+                ;
         targetURL = Translator_URL;
         texts = new HashSet<>();
         saveTerm = -1;
