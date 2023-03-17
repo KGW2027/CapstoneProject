@@ -1,9 +1,13 @@
 # PyTorch Install : pip install torch==1.12.0+cu113 torchvision==0.13.0+cu113 torchaudio==0.12.0 --extra-index-url https://download.pytorch.org/whl/cu113
 # Transformer Install : pip install transformers==4.10.0
 # 그 외에 tqdm(progress_bar), Korpora(Korean dataset) 설치
+import os
+
+os.environ['TRANSFORMERS_CACHE'] = './transformers/cache/'
 
 import torch
-from transformers import AlbertForSequenceClassification, BertTokenizerFast, ElectraForSequenceClassification, ElectraTokenizer
+from transformers import AlbertForSequenceClassification, BertTokenizerFast, ElectraForSequenceClassification, \
+    ElectraTokenizer
 
 from models.KorNLIModel import KorNLIModel
 from models.KorSTSModel import KorSTSModel
@@ -31,9 +35,15 @@ def run_nli():
     nli.test()
 
 def run_lol01():
-    model_name = "monologg/koelectra-base-v3-discriminator"
-    tokenizer = ElectraTokenizer.from_pretrained(model_name)
-    lol01 = GameLolModel_t1(tokenizer)
+    lol01 = GameLolModel_t1()
+    lol01.load_model('../ptunning/kogpt_lol_complete')
+
+    gens = lol01.generate_text(seed="징크스는 자운의")
+    for idx in range(len(gens)):
+        text = gens[idx].replace('. ', '.\n')
+        print(f"결과 {idx+1} ::\n{text}\n")
+
+    # lol01.pretrain()
 
 
 run_lol01()
