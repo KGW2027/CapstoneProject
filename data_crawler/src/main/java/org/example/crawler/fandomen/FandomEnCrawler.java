@@ -2,6 +2,7 @@ package org.example.crawler.fandomen;
 
 import org.example.crawler.exception.NotFoundContainerException;
 import org.openqa.selenium.By;
+import org.openqa.selenium.NoSuchElementException;
 import org.openqa.selenium.WebElement;
 
 import java.util.List;
@@ -17,8 +18,8 @@ public abstract class FandomEnCrawler {
     private final String CONTAINER_CLASS = "mw-parser-output";
     private final String CATEGORIES_CLASS = "category-page__members";
     protected final String[] CATEGORY_BLACK_LIST = {
-            "comics", "tabletop", "audio", "videos", "images", "icon", "voice-over", "chroma", "tile",
-            "loading", "skin", "circle", "square", "items"
+            "comics", "tabletop", "audio", "video", "image", "icon", "voice-over", "chroma", "tile",
+            "loading", "skin", "circle", "square", "item"
     };
 
     protected final String WIKI_PREFIX = "https://leagueoflegends.fandom.com/wiki/";
@@ -45,7 +46,13 @@ public abstract class FandomEnCrawler {
 
     protected String[] getCategory(WebElement body) {
         // <div class="page-header__categories">
-        WebElement container = body.findElement(By.className("page-header__categories"));
+        WebElement container = null;
+        try {
+            container = body.findElement(By.className("page-header__categories"));
+        } catch(NoSuchElementException ex) {
+            System.out.println("카테고리 Header를 발견하지 못했습니다.");
+        }
+        if(container == null) return new String[0];
         String context = container.getText().replace("in:", "").toLowerCase();
         String[] split = context.split(", ");
         for(String blacklist : CATEGORY_BLACK_LIST) {

@@ -37,9 +37,19 @@ public class FandomEnWikiCrawler {
     }
 
     public void start() {
-        queue = new FandomEnCrawlingQueue();
-        String URL_ROOT = "https://leagueoflegends.fandom.com/wiki/Category:Lore";
-        queue.add(URL_ROOT);
+        try {
+            queue = new FandomEnCrawlingQueue();
+            FandomEnCrawlingQueue cache = queue.loadCategoryCache();
+            if(cache == null) {
+                String URL_ROOT = "https://leagueoflegends.fandom.com/wiki/Category:Lore";
+                queue.add(URL_ROOT);
+            } else {
+                System.out.printf("저장된 캐시를 불러옵니다. [Categories : %d, Documents : %d]\n", cache.size()[0], cache.size()[1]);
+                queue = cache;
+            }
+        } catch (IOException | ClassNotFoundException e) {
+            throw new RuntimeException(e);
+        }
         crawl();
     }
 
@@ -69,7 +79,7 @@ public class FandomEnWikiCrawler {
         int documents = 0;
         while(!queue.isEmpty()) {
             String nowURL = queue.poll();
-            System.out.printf("[Attempt %d] %s / %d\n", ++documents, nowURL, queue.size());
+            System.out.printf("[Attempt %d] remain :: (categories : %d, documents : %d)] %s\n", ++documents, queue.size()[0], queue.size()[1], nowURL);
 
             FandomEnDocumentType docType = FandomEnDocumentType.getType(nowURL);
             if(docType != FandomEnDocumentType.Category && docType != FandomEnDocumentType.Document) {

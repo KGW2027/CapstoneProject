@@ -20,6 +20,8 @@ public class FandomEnDocumentCrawler extends FandomEnCrawler {
     @Override
     protected void execute(FandomEnCrawlingQueue queue, WebElement body) throws NotFoundContainerException {
 
+        if(getCategory(body).length == 0) return;
+
         contextMap = new HashMap<>();
 
         String[] contexts = getContextContainer(body).getAttribute("innerHTML").split("(?=<h2>)");

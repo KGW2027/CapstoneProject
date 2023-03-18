@@ -5,6 +5,7 @@ import org.openqa.selenium.TimeoutException;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeOptions;
+import org.openqa.selenium.support.ui.ExpectedCondition;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
@@ -17,7 +18,7 @@ public class ChromeDriver {
     private ChromeOptions options;
     private WebDriver driver;
     private long timeout;
-    private By waitCondition;
+    private ExpectedCondition waitCondition;
 
     public ChromeDriver() {
         String DRIVER = "./module/chromedriver_win32/chromedriver.exe";
@@ -45,18 +46,31 @@ public class ChromeDriver {
         return this;
     }
 
-    public ChromeDriver setWait(By condition) {
+    public ChromeDriver setWait(ExpectedCondition condition) {
         waitCondition = condition;
         return this;
+    }
+
+    public void reconnect() {
+        driver.close();
+        driver = new org.openqa.selenium.chrome.ChromeDriver(options);
     }
 
     public void connect(String url) throws TimeoutException {
         driver.get(url);
         if(waitCondition != null)
-            new WebDriverWait(driver, Duration.ofSeconds(timeout)).until(ExpectedConditions.presenceOfElementLocated(waitCondition));
+            new WebDriverWait(driver, Duration.ofSeconds(timeout)).until(waitCondition);
     }
 
     public List<WebElement> findElements(By condition) {
         return driver.findElements(condition);
+    }
+
+    public static ExpectedCondition<Boolean> attributeToBeNotEmpty(By locator, String attributeName) {
+        return driver -> {
+            WebElement element = driver.findElement(locator);
+            String attributeValue = element.getAttribute(attributeName);
+            return !attributeValue.isEmpty();
+        };
     }
 }

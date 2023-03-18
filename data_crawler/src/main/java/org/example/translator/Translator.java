@@ -5,12 +5,17 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import org.example.ChromeDriver;
+import org.example.translator.processors.FandomJSONParser;
 import org.example.translator.processors.UniverseParser;
 import org.json.simple.JSONArray;
 import org.json.simple.parser.ParseException;
+import org.openkoreantext.processor.OpenKoreanTextProcessorJava;
+import org.openkoreantext.processor.tokenizer.Sentence;
 import org.openqa.selenium.By;
 import org.openqa.selenium.TimeoutException;
 import org.openqa.selenium.WebElement;
+import org.openqa.selenium.support.ui.ExpectedCondition;
+import org.openqa.selenium.support.ui.ExpectedConditions;
 
 import java.io.*;
 import java.net.URLEncoder;
@@ -18,38 +23,60 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+enum TranslatorAPI {
+    GOOGLE("https://translate.google.co.kr/?sl={START}&tl={END}&text={TEXT}&op=translate", By.className("ryNqvb"), ExpectedConditions.presenceOfElementLocated(By.className("ryNqvb"))),
+    DEEPL("https://www.deepl.com/translator#{START}/{END}/{TEXT}",
+            By.cssSelector("#panelTranslateText > div.lmt__sides_container > div.lmt__sides_wrapper > section.lmt__side_container.lmt__side_container--target > div.lmt__textarea_container > div.lmt__inner_textarea_container > d-textarea > div"),
+            ChromeDriver.attributeToBeNotEmpty(By.cssSelector("#panelTranslateText > div.lmt__sides_container > div.lmt__sides_wrapper > section.lmt__side_container.lmt__side_container--target > div.lmt__textarea_container > div.lmt__inner_textarea_container"), "title"))
+    ;
+
+    String baseURL;
+    By waitElement;
+    ExpectedCondition waitCondition;
+
+    TranslatorAPI(String url, By element, ExpectedCondition waitCondition) {
+        baseURL = url;
+        waitElement = element;
+        this.waitCondition = waitCondition;
+    }
+
+}
 
 public class Translator {
 
     public static void main(String[] args) {
-        new Translator()
+        new Translator(TranslatorAPI.DEEPL)
                 .setStartLanguage(Language.ENGLISH)
                 .setEndLanguage(Language.KOREAN)
-//                .initTexts(new FandomJSONParser())
-                .initTexts(new UniverseParser())
+                .initTexts(new FandomJSONParser())
+//                .initTexts(new UniverseParser())
                 .setAutosaveTerm(100)
                 .translate()
         ;
     }
-
-    private final String Translator_URL = "https://translate.google.co.kr/?sl={START}&tl={END}&text={TEXT}&op=translate";
 
     private ChromeDriver driver;
     private String targetURL;
     private HashSet<String> texts;
     private File output;
     private int saveTerm;
+    private TranslatorAPI api;
+    private Long startTime;
 
-    private Translator() {
+    private Translator(TranslatorAPI api) {
         driver = new ChromeDriver()
                 .setTimeout(10L)
-                .setWait(By.className("ryNqvb"))
+                .setWait(api.waitCondition)
                 .enableHeadlessMode()
                 .init()
                 ;
-        targetURL = Translator_URL;
+        targetURL = api.baseURL;
         texts = new HashSet<>();
         saveTerm = -1;
+        this.api = api;
     }
 
     public Translator setStartLanguage(Language lang) {
@@ -82,6 +109,30 @@ public class Translator {
         return this;
     }
 
+    private String preprocess(String line) {
+        return line.replace("“", "\"")
+                .replace("”", "\"")
+                .replace("’", "'")
+                .replace("‘", "'")
+                .replace("…", "...")
+                .replace("—", " ")
+                .replace("–", "")
+                .replace("ø", "o")
+                .replace("♥", "love")
+                .replace("á", "a")
+                .replace("ä", "a")
+                .replace("é", "e")
+                .replace("í", "i")
+                .replace("ö", "o")
+                .replace("ü", "u")
+                .replace("°", " degrees")
+                .replace("·", ",")
+                .replace("「", "\"")
+                .replace("」", "\"")
+                .replace("(bug)", "")
+                .replaceAll("\\[[0-9]+\\]", "");
+    }
+
 
     public void translate() {
         if (output == null) {
@@ -89,45 +140,55 @@ public class Translator {
         }
 
         System.out.printf("%d개 문장을 발견하였습니다. 번역작업을 시작합니다.\n", texts.size());
+        
         StringBuilder translate = new StringBuilder();
-
         List<String> requests = new ArrayList<>();
+        Pattern exceptLiteral = Pattern.compile("[^\\u0000-\\u007E가-힣]"); // ascii 범위와 한글
+        
+        // 문장을 번역기에 보낼 텍스트로 가공
         for (String line : texts) {
-            if (translate.length() + line.length() > 4500) {
+            if (translate.length() + line.length() > 2500) {
                 requests.add(translate.toString());
                 translate.setLength(0);
             }
-            translate.append(line).append("\n");
+
+            if(line.contains("rewards") || line.contains("pvp") || line.contains("point") || line.contains("level")) continue;
+
+            line = preprocess(line);
+            Matcher matcher = exceptLiteral.matcher(line);
+            if(matcher.find()) continue;
+            translate.append(line).append("\n\n");
         }
         if (translate.length() > 0) requests.add(translate.toString());
 
+        // 출력 JSON
         JSONArray outputArray = new JSONArray();
+        startTime = System.currentTimeMillis();
+        String debugFormat = "[%d / %d (%.2f%%)] 예상 남은 시간 : %s :: %d 길이의 문자열에 대해 번역 요청";
+
 
         for (int idx = 0; idx < requests.size(); idx++) {
             String req = requests.get(idx);
-            if(req.contains("/") || req.contains("%")) {
-                req = URLEncoder.encode(req, StandardCharsets.UTF_8);
-            }
-            System.out.printf("[%d / %d] %.2f%%  :: Request %d chars", idx + 1, requests.size(), 100f * (idx + 1) / requests.size(), req.length());
+
+            req = req.replace("/", " ");
+
+            double progress = 100f * (idx + 1) / requests.size();
+            System.out.printf(debugFormat, idx+1, requests.size(), progress, calcRemains(idx, requests.size()), req.length());
+
             String request = targetURL.replace("{TEXT}", req);
             try {
-                driver.connect(request);
+                driver.connect(request.replace("\n", "%0A"));
             } catch(TimeoutException timeout) {
                 System.out.println(" :: TIMEOUT");
+                if(api == TranslatorAPI.DEEPL) {
+                    driver.reconnect();
+                    idx -= 1;
+                }
                 continue;
             }
 
-            List<WebElement> elements = driver.findElements(By.className("ryNqvb"));
-            System.out.printf(" :: %d개의 번역 문장 발견\n", elements.size());
-            if (elements.size() == 0){
-                continue;
-            }
-
-            for (WebElement element : elements) {
-                if (element.getText().length() < 7) continue;
-                String text = element.getText();
-                outputArray.add(text);
-            }
+            List<WebElement> elements = driver.findElements(api.waitElement);
+            dataProcess(elements, outputArray);
 
             if (saveTerm > 0 && (idx > 0 && idx % saveTerm == 0)) {
                 save(outputArray);
@@ -135,6 +196,40 @@ public class Translator {
         }
 
         save(outputArray);
+    }
+
+    private String calcRemains(int did, int max) {
+        long progress = System.currentTimeMillis() - startTime;
+        double time = (((double) progress / did) * (max - did)) / 1000d;
+
+        int hours = (int) Math.floor(time / 3600);
+        time -= 3600 * hours;
+        int mins = (int) Math.floor(time / 60);
+        time -= 60 * mins;
+        return String.format("%d시간 %02d분 %02d초", hours, mins, Math.round(time));
+    }
+
+    private void dataProcess(List<WebElement> elements, JSONArray output) {
+        if(elements.size() == 0) return;
+
+        if(api == TranslatorAPI.GOOGLE) {
+            System.out.printf(" :: %d개의 번역 문장 발견\n", elements.size());
+
+            for (WebElement element : elements) {
+                if (element.getText().length() < 7) continue;
+                String text = element.getText();
+                output.add(text);
+            }
+        } else if(api == TranslatorAPI.DEEPL) {
+            String data = elements.get(0).getText();
+            CharSequence cs = OpenKoreanTextProcessorJava.normalize(data);
+
+            List<Sentence> sentences = OpenKoreanTextProcessorJava.splitSentences(cs);
+            System.out.printf(" :: %d개의 번역 문장 발견\n", sentences.size());
+            for(Sentence s : sentences) {
+                output.add(s.text().replace("\n", ""));
+            }
+        }
     }
 
     private void save(JSONArray json){

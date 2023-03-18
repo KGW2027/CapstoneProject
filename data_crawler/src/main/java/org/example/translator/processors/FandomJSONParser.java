@@ -7,6 +7,7 @@ import org.json.simple.parser.ParseException;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.regex.Pattern;
 
 public class FandomJSONParser extends CrawlDataProcessor {
 
@@ -68,6 +69,8 @@ public class FandomJSONParser extends CrawlDataProcessor {
 
         long charCount = 0L;
 
+        Pattern h3 = Pattern.compile("^[0-9].*[0-9]\\.[0-9]");
+
         for(SetData sd : map.values()) {
             if(sd.values < 10) continue;
             if(sd.sentences.size() <= 1) continue;
@@ -77,14 +80,15 @@ public class FandomJSONParser extends CrawlDataProcessor {
                     String line = ((String) o).toLowerCase();
                     
                     // 무의미한 텍스트 개수 줄이기
+                    if(line.length() <= 6) continue;
                     if(line.split(" ").length <= 3) continue;
-//                    if(line.length() < 20) continue;
+                    if(h3.matcher(line).find()) continue;
 
                     for(String except : except_contains)
                         if(line.contains(except.toLowerCase())) continue lineloop;
 
                     // 각주(Footnote) 제거
-                    line = line.replaceAll("[d+]", "");
+                    line = line.replaceAll("\\[[[0-9]+]\\]", "");
                     texts.add(line);
                     charCount += line.length();
                 }
@@ -102,6 +106,6 @@ public class FandomJSONParser extends CrawlDataProcessor {
 
     @Override
     public String getSrcPath() {
-        return "./data/FandomEn/lolwiki_2574.json";
+        return "./data/FandomEn/lolwiki_2472.json";
     }
 }
