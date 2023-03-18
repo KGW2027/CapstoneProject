@@ -5,6 +5,7 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import org.example.ChromeDriver;
+import org.example.processer.UniqueDict;
 import org.example.translator.processors.FandomJSONParser;
 import org.example.translator.processors.UniverseParser;
 import org.json.simple.JSONArray;
@@ -27,20 +28,23 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 enum TranslatorAPI {
-    GOOGLE("https://translate.google.co.kr/?sl={START}&tl={END}&text={TEXT}&op=translate", By.className("ryNqvb"), ExpectedConditions.presenceOfElementLocated(By.className("ryNqvb"))),
+    GOOGLE("https://translate.google.co.kr/?sl={START}&tl={END}&text={TEXT}&op=translate", By.className("ryNqvb"), ExpectedConditions.presenceOfElementLocated(By.className("ryNqvb")), 5000),
     DEEPL("https://www.deepl.com/translator#{START}/{END}/{TEXT}",
             By.cssSelector("#panelTranslateText > div.lmt__sides_container > div.lmt__sides_wrapper > section.lmt__side_container.lmt__side_container--target > div.lmt__textarea_container > div.lmt__inner_textarea_container > d-textarea > div"),
-            ChromeDriver.attributeToBeNotEmpty(By.cssSelector("#panelTranslateText > div.lmt__sides_container > div.lmt__sides_wrapper > section.lmt__side_container.lmt__side_container--target > div.lmt__textarea_container > div.lmt__inner_textarea_container"), "title"))
+            ChromeDriver.attributeToBeNotEmpty(By.cssSelector("#panelTranslateText > div.lmt__sides_container > div.lmt__sides_wrapper > section.lmt__side_container.lmt__side_container--target > div.lmt__textarea_container > div.lmt__inner_textarea_container"), "title"),
+            3000)
     ;
 
     String baseURL;
     By waitElement;
     ExpectedCondition waitCondition;
+    int maxLength;
 
-    TranslatorAPI(String url, By element, ExpectedCondition waitCondition) {
+    TranslatorAPI(String url, By element, ExpectedCondition waitCondition, int maxLength) {
         baseURL = url;
         waitElement = element;
         this.waitCondition = waitCondition;
+        this.maxLength = (int) (maxLength * 0.9);
     }
 
 }
@@ -70,7 +74,7 @@ public class Translator {
         driver = new ChromeDriver()
                 .setTimeout(10L)
                 .setWait(api.waitCondition)
-                .enableHeadlessMode()
+//                .enableHeadlessMode()
                 .init()
                 ;
         targetURL = api.baseURL;
@@ -130,7 +134,8 @@ public class Translator {
                 .replace("「", "\"")
                 .replace("」", "\"")
                 .replace("(bug)", "")
-                .replaceAll("\\[[0-9]+\\]", "");
+                .replaceAll("\\[.*?\\]", "")
+                .replaceAll("\\(.*?\\)", "");
     }
 
 
@@ -147,7 +152,7 @@ public class Translator {
         
         // 문장을 번역기에 보낼 텍스트로 가공
         for (String line : texts) {
-            if (translate.length() + line.length() > 2500) {
+            if (translate.length() + line.length() > api.maxLength) {
                 requests.add(translate.toString());
                 translate.setLength(0);
             }
@@ -213,22 +218,30 @@ public class Translator {
         if(elements.size() == 0) return;
 
         if(api == TranslatorAPI.GOOGLE) {
-            System.out.printf(" :: %d개의 번역 문장 발견\n", elements.size());
+            int sentenceCount = 0;
 
             for (WebElement element : elements) {
                 if (element.getText().length() < 7) continue;
-                String text = element.getText();
-                output.add(text);
+                CharSequence cs = OpenKoreanTextProcessorJava.normalize(element.getText());
+                List<Sentence> sentences = OpenKoreanTextProcessorJava.splitSentences(cs);
+                sentenceCount += sentences.size();
+                addOutput(output, sentences);
             }
+
+            System.out.printf(" :: %d개의 번역 문장 발견\n", sentenceCount);
         } else if(api == TranslatorAPI.DEEPL) {
             String data = elements.get(0).getText();
             CharSequence cs = OpenKoreanTextProcessorJava.normalize(data);
 
             List<Sentence> sentences = OpenKoreanTextProcessorJava.splitSentences(cs);
             System.out.printf(" :: %d개의 번역 문장 발견\n", sentences.size());
-            for(Sentence s : sentences) {
-                output.add(s.text().replace("\n", ""));
-            }
+            addOutput(output, sentences);
+        }
+    }
+
+    private void addOutput(JSONArray output, List<Sentence> sentences) {
+        for(Sentence s : sentences) {
+            output.add(UniqueDict.getInstance().replace(s.text().replace("\n", "")));
         }
     }
 
