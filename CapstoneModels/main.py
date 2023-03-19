@@ -35,15 +35,19 @@ def run_nli():
     nli.test()
 
 def run_lol01():
-    lol01 = GameLolModel_t1()
+    lol01 = GameLolModel_t1(max_length=64, batch_size=16, l_rate=5e-6)
+    # lol01 = GameLolModel_t1()
     lol01.load_model('../ptunning/kogpt_lol_complete')
+    # lol01.add_train_data()
 
-    gens = lol01.generate_text(seed="징크스는 자운의")
+    # lol01.print_distribution()
+    # lol01.pretrain(num_epoch=10, save_step=30000, warm_up=25000)
+
+    gens = lol01.generate_text(seed="자운의 말썽쟁이의 이름은")
     for idx in range(len(gens)):
         text = gens[idx].replace('. ', '.\n')
         print(f"결과 {idx+1} ::\n{text}\n")
 
-    # lol01.pretrain()
 
 
 run_lol01()

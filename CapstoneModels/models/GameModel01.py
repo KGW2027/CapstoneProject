@@ -17,37 +17,13 @@ import GraphGenerator
 class GameLolModel_t1:
 
     def add_sentence(self, sentence):
-        sentence = GameLanguage.replace(sentence)
-        if len(sentence) > 256:
-            for splited in sentence.split(". "):
-                self.train_sentences.append(splited)
-        else:
-            self.train_sentences.append(sentence)
+        self.train_sentences.append(sentence)
 
-    def load_translated(self, path):
+    def load_data(self, path):
         with open(path, 'r', encoding='utf-8') as f:
             json_file = json.load(f)
             for text in json_file:
-                start_with_num = re.match(r"^[0-9] ", text)
-                if start_with_num and re.search(r" [0-9]\.[0-9] ", text):
-                    continue
-                elif 'riot games' in text:
-                    continue
-                else:
-                    self.add_sentence(text)
-
-
-    def load_def(self, path):
-        with open(path, 'r', encoding='utf-8') as f:
-            json_file = json.load(f)
-            for texts in json_file:
-                texts = texts['data']['Header']
-                for text in texts:
-                    if len(text) < 10 or len(text.split(" ")) < 3:
-                        continue
-                    else:
-                        self.add_sentence(text)
-
+                self.add_sentence(text)
 
     def load_model(self, path: str = None):
         if path is None:
@@ -70,20 +46,13 @@ class GameLolModel_t1:
 
 
 
-    def pretrain(self):
-        train01_dir = "../data_crawler/data/univ_ko/Univ-Ko.json"
-        train02_dir = "../data_crawler/data/FandomEnTranslated/Fandom-EnKo.json"
-        train03_dir = "../data_crawler/data/UniverseEnTranslated/Univ-EnKo.json"
-
-        self.load_def(train01_dir)
-        self.load_translated(train02_dir)
-        self.load_translated(train03_dir)
+    def pretrain(self, num_epoch:int = 1, warm_up:int = 40000, save_step:int = 40000):
 
         self.dataset = GameDataset(self.tokenizer, self.train_sentences)
         data_collator = DataCollatorForLanguageModeling(tokenizer=self.tokenizer, mlm=True, mlm_probability=0.15)
-        train_args = TrainingArguments(output_dir='../ptunning/kogpt_lol_ckpt', num_train_epochs=5,
+        train_args = TrainingArguments(output_dir='../ptunning/kogpt_lol_ckpt', num_train_epochs=num_epoch,
                                        per_device_train_batch_size=self.batch_size, per_gpu_train_batch_size=self.batch_size,
-                                       warmup_steps=40000, weight_decay=0.01, save_steps=40000)
+                                       warmup_steps=warm_up, weight_decay=0.001, save_steps=save_step, learning_rate=self.learning_rate)
         trainer = Trainer(model=self.model, args=train_args, data_collator=data_collator, train_dataset=self.dataset)
 
         self.clean()
@@ -94,18 +63,33 @@ class GameLolModel_t1:
         trainer.save_model(save_path)
         self.tokenizer.save_pretrained(save_path)
 
-
-    def train(self):
-        print('a')
-
-
-    def test(self):
-        print('b')
-
-
     def clean(self):
         gc.collect()
         torch.cuda.empty_cache()
+
+
+    def add_train_data(self):
+        train01_dir = "../data_crawler/data/univ_ko/Univ-Ko-process.json"
+        train02_dir = "../data_crawler/data/FandomEnTranslated/Fandom-EnKo-DeepL-process.json"
+        train03_dir = "../data_crawler/data/UniverseEnTranslated/Univ-EnKo-DeepL-process.json"
+        self.load_data(train01_dir)
+        self.load_data(train02_dir)
+        self.load_data(train03_dir)
+
+
+    def print_distribution(self):
+        with tqdm(total=len(self.train_sentences), leave=False) as pbar:
+            for text in self.train_sentences:
+                token = self.tokenizer(text)
+                length = len(token['input_ids'])
+                if length > 256:
+                    continue
+                self.distribution[length] += 1
+                pbar.update(1)
+
+        print(self.distribution)
+        GraphGenerator.generate_tokens_length(self.distribution)
+
 
 
     def generate_text(self, seed, max_length: int = 128, gen_seqs: int = 5):
@@ -126,16 +110,19 @@ class GameLolModel_t1:
         return seqs
 
 
-    def __init__(self):
+    def __init__(self, max_length:int = 128, batch_size:int = 4, l_rate:float = 5):
 
         self.train_sentences = []
 
-        self.max_length = 64
-        self.batch_size = 4
+        self.max_length = max_length
+        self.batch_size = batch_size
+        self.learning_rate = l_rate
         self.tokenizer = None
         self.model = None
         self.dataset = None
         self.dataloader = None
+
+        self.distribution = collections.defaultdict(int)
 
 
 
