@@ -55,8 +55,8 @@ public class Translator {
         new Translator(TranslatorAPI.DEEPL)
                 .setStartLanguage(Language.ENGLISH)
                 .setEndLanguage(Language.KOREAN)
-                .initTexts(new FandomJSONParser())
-//                .initTexts(new UniverseParser())
+//                .initTexts(new FandomJSONParser())
+                .initTexts(new UniverseParser())
                 .setAutosaveTerm(100)
                 .translate()
         ;

@@ -10,7 +10,6 @@ import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
 import java.io.*;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -18,7 +17,9 @@ import java.util.regex.Pattern;
 public class ResultProcessor {
 
     public static void main(String[] args) throws IOException, ParseException {
-        new ResultProcessor("./data/FandomEnTranslated/Fandom-EnKo-DeepL.json")
+//        new ResultProcessor("./data/FandomEnTranslated/Fandom-EnKo-DeepL.json")
+//                .process();
+        new ResultProcessor("./data/UniverseEnTranslated/Univ-Enko-DeepL.json")
                 .process();
     }
 
@@ -129,7 +130,26 @@ engc =0;
                 .replace("스카르너", "스카너")
                 .replace("신자오", "신짜오")
                 .replace("나수스", "나서스")
+                .replace("익스탈", "이쉬탈")
+                .replace("람무스", "람머스")
+                .replace("신조", "신짜오")
+                .replace("조냐의", "존야의")
+                .replace("스와인", "스웨인")
+                .replace("그레이브스", "그레이브즈")
+                .replace("카시오페이아", "카시오페아")
+                .replace("켄넨", "케넨")
+                .replace("리 신", "리신")
+                .replace("룩스", "럭스")
+                .replace("모가나", "모르가나")
+                .replace("포피", "뽀삐")
+                .replace("파피", "뽀삐")
+                .replace("양귀비", "뽀삐")
+                .replace("지그스", "직스")
+                .replace("실라스", "사일러스")
+                .replace("악샨", "아크샨")
+                .replace("싱드", "신지드")
                 .replace("&", "와 ")
+                .replaceAll("잭(?!스)", "자크")
                 .replaceAll("(?<!아)이오니아", "아이오니아")
                 .replaceAll("(?<!아)이오니안", "아이오니안")
                 .replaceAll("(?<!인)빅터(?!터스)", "빅토르")

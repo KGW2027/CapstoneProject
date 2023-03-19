@@ -21,6 +21,7 @@ public class ChromeDriver {
     private long timeout;
     private ExpectedCondition waitCondition;
     private boolean vpnSetted;
+    private final boolean isUseVpn = false;
 
     public ChromeDriver() {
         String DRIVER = "./module/chromedriver_win32/chromedriver.exe";
@@ -30,7 +31,8 @@ public class ChromeDriver {
         options.addArguments("--disable-popup-blocking");
         options.addArguments("--remote-allow-origins=*");
         options.addArguments("--disable-gpu");
-//        options.addExtensions(new File("./module/holavpn.crx"));
+        if(isUseVpn)
+            options.addExtensions(new File("./module/holavpn.crx"));
         timeout = 10L;
     }
 
@@ -46,7 +48,7 @@ public class ChromeDriver {
 
     public ChromeDriver init() {
         driver = new org.openqa.selenium.chrome.ChromeDriver(options);
-//        vpnSetted = false;
+        vpnSetted = false;
         return this;
     }
 
@@ -61,13 +63,13 @@ public class ChromeDriver {
     }
 
     public void connect(String url) throws TimeoutException {
-//        if(!vpnSetted) {
-//            driver.get(url);
-//            Scanner scanner = new Scanner(System.in);
-//            System.out.print("VPN 설정이 완료되면 Enter를 입력해주세요.");
-//            scanner.nextLine();
-//            vpnSetted = true;
-//        }
+        if(isUseVpn && !vpnSetted) {
+            driver.get(url);
+            Scanner scanner = new Scanner(System.in);
+            System.out.print("VPN 설정이 완료되면 Enter를 입력해주세요.");
+            scanner.nextLine();
+            vpnSetted = true;
+        }
 
         driver.get(url);
         if(waitCondition != null)

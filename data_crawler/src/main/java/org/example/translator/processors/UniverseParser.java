@@ -38,6 +38,6 @@ public class UniverseParser extends CrawlDataProcessor {
 
     @Override
     public String getSrcPath() {
-        return "./data/univ_en/univ_en_us-0519.json";
+        return "./data/univ_en/Univ-En.json";
     }
 }
