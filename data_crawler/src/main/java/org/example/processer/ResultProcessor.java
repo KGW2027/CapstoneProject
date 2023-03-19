@@ -11,17 +11,18 @@ import org.json.simple.parser.ParseException;
 
 import java.io.*;
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class ResultProcessor {
 
     public static void main(String[] args) throws IOException, ParseException {
-//        new ResultProcessor("./data/FandomEnTranslated/Fandom-EnKo-DeepL.json")
-//                .process();
-//        new ResultProcessor("./data/UniverseEnTranslated/Univ-Enko-DeepL.json")
-//                .process();
-        new ResultProcessor("./data/univ_ko/Univ-Ko.json")
+        new ResultProcessor("./data/processing/fandom-en.json")
+                .process();
+        new ResultProcessor("./data/processing/univ-en.json")
+                .process();
+        new ResultProcessor("./data/processing/univ-ko.json")
                 .process();
     }
 
@@ -107,11 +108,26 @@ public class ResultProcessor {
         }
     }
 
+    private boolean checkTwice(String text) {
+        String[] split = text.split(" ");
+        for(int idx = 1 ; idx < split.length ; idx++) {
+            if(split[idx].equalsIgnoreCase(split[idx - 1])) return true;
+        }
+        return false;
+    }
+
     private String postProcess(String text) {
         Pattern english = Pattern.compile("[a-zA-Z]+");
         Pattern years = Pattern.compile("20[0-9]{2}");
         Pattern numStart = Pattern.compile("^[0-9]");
-        Pattern gameInfo = Pattern.compile("([0-9]\\.[0-9]*)|(공격력|방어력|게임 모드|미니언|플레이|패치|유닛|주문 피해|물리 피해|기본 생명력|군중 제어|경험치|획득량|재사용 대기|체력|매개변수|템플릿|시야 반경|면역|활성화|증가|감소|적 챔피언|아군 챔피언|컨셉 아트|일러스트|게임|모델|자세히 보기|지역 보기)");
+        Pattern gameInfo = Pattern.compile("( - )|(시즌 [0-9]+)|( [0-9]+ )|([0-9]\\.[0-9]*)|" +
+                "(공격력|방어력|게임 모드|미니언|플레이|패치|유닛|주문 피해|물리 피해|기본 생명력|군중 제어|경험치|획득량|재사용 대기|체력|" +
+                "매개변수|템플릿|시야 반경|면역|활성화|증가|감소|적 챔피언|아군 챔피언|컨셉 아트|일러스트|게임|모델|자세히 보기|지역 보기|관련 챔피언|스킨|크로마|스킬|리그 오브 레전드|기본 공격|주문 보호막|" +
+                "궁극기|패시브|계산됩니다|중단되|아케인|애니메이션|이벤트)");
+
+        if(checkTwice(text)) {
+            return null;
+        }
 
         // 연도 정보가 포함되어 있으면 이벤트 정보일 확률이 높음.
         if(years.matcher(text).find()) return null;
@@ -122,11 +138,6 @@ public class ResultProcessor {
         // 콜론이 들어가 있으면 스킬 설명, 잡다한 정보일 확률이 대략 80%정도 됨. (20%의 오차를 없애는 현명한 방법을 찾지 못함)
         int colonIdx = text.indexOf(":");
         if (colonIdx >= 0) return null;
-
-        // 패치가 들어있으면 게임 패치와 관련된 내용일 가능성이 높음 ( 45개중 대략 10개정도는 일반 텍스트 )
-        // 게임 내 정보일 확률이 높은 키워드는 위의 gameInfo Pattern에 추가
-        Matcher matcher = gameInfo.matcher(text);
-        if(matcher.find()) return null;
 
         // 주로 잘못입력된 정보를 교체함
         text = text.replace("T.F.", "트위스티드 페이트")
@@ -153,6 +164,7 @@ public class ResultProcessor {
                 .replace("에블린", "이블린")
                 .replace("시온", "사이온")
                 .replace("아니비아", "애니비아")
+                .replace("강플랭크", "갱플랭크")
                 .replace("엘리즈", "엘리스")
                 .replace("아이버", "아이번")
                 .replace("모르데카이저", "모데카이저")
@@ -162,6 +174,7 @@ public class ResultProcessor {
                 .replace("말자하르", "말자하")
                 .replace("스카르너", "스카너")
                 .replace("신자오", "신짜오")
+                .replace("신 자오", "신짜오")
                 .replace("나수스", "나서스")
                 .replace("익스탈", "이쉬탈")
                 .replace("람무스", "람머스")
@@ -181,8 +194,10 @@ public class ResultProcessor {
                 .replace("실라스", "사일러스")
                 .replace("악샨", "아크샨")
                 .replace("싱드", "신지드")
+                .replace("트위스티드 운명", "트위스티드 페이트")
                 .replace("&", "와 ")
                 .replaceAll("잭(?!스)", "자크")
+                .replaceAll("그레이브(?!즈)", "그레이브즈")
                 .replaceAll("(?<!아)이오니아", "아이오니아")
                 .replaceAll("(?<!아)이오니안", "아이오니안")
                 .replaceAll("(?<!인)빅터(?!터스)", "빅토르")
@@ -190,6 +205,8 @@ public class ResultProcessor {
                 .replaceAll("\\.{2,}", ".")
                 .replaceAll(" {2,}", " ")
                 .replaceAll("-{2,}", "-")
+                .replaceAll("(?=(\\(|\\[|\\{)).*?(?<=(\\)|\\]|\\}))", "")
+                .replaceAll("[\\(\\[\\{\\}\\]\\)]", "")
                 ;
 
         // 이후 영어가 남아있는 경우 보통 의미 없는 문장인 경우가 많음.
@@ -206,10 +223,15 @@ public class ResultProcessor {
         // ~가 들어가면서 그 뒤가 10글자 이내인 경우, 챔피언의 대사로 처리한다.
         if(text.contains("~")) {
             String[] split = text.split("~");
-            if(split[1].length() < 10) {
-                text = String.format("%s는 말했다. %s", split[1], split[0]);
+            if(split.length >= 2 && split[1].length() < 10) {
+                text = split[0];
             }
         }
+
+        // 패치가 들어있으면 게임 패치와 관련된 내용일 가능성이 높음 ( 45개중 대략 10개정도는 일반 텍스트 )
+        // 게임 내 정보일 확률이 높은 키워드는 위의 gameInfo Pattern에 추가
+        Matcher matcher = gameInfo.matcher(text);
+        if(matcher.find()) return null;
 
         // 불필요한 공백 제거
         return text.trim();
