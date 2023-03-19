@@ -19,7 +19,9 @@ public class ResultProcessor {
     public static void main(String[] args) throws IOException, ParseException {
 //        new ResultProcessor("./data/FandomEnTranslated/Fandom-EnKo-DeepL.json")
 //                .process();
-        new ResultProcessor("./data/UniverseEnTranslated/Univ-Enko-DeepL.json")
+//        new ResultProcessor("./data/UniverseEnTranslated/Univ-Enko-DeepL.json")
+//                .process();
+        new ResultProcessor("./data/univ_ko/Univ-Ko.json")
                 .process();
     }
 
@@ -27,7 +29,31 @@ public class ResultProcessor {
     private JSONArray array;
     private File output;
     private JSONObject properMap;
-    private int engc;
+
+    private String preprocess(String line) {
+        return line.replace("“", "\"")
+                .replace("”", "\"")
+                .replace("’", "'")
+                .replace("‘", "'")
+                .replace("…", "...")
+                .replace("—", " ")
+                .replace("–", "")
+                .replace("ø", "o")
+                .replace("♥", "love")
+                .replace("á", "a")
+                .replace("ä", "a")
+                .replace("é", "e")
+                .replace("í", "i")
+                .replace("ö", "o")
+                .replace("ü", "u")
+                .replace("°", " degrees")
+                .replace("·", ",")
+                .replace("「", "\"")
+                .replace("」", "\"")
+                .replace("(bug)", "")
+                .replaceAll("\\[.*?\\]", "")
+                .replaceAll("\\(.*?\\)", "");
+    }
 
     private ResultProcessor(String path) throws IOException, ParseException {
 
@@ -51,16 +77,23 @@ public class ResultProcessor {
 
     private void process() {
         HashSet<String> processed = new HashSet<>();
-engc =0;
+
         for (Object o : array) {
-            String sentence = (String) o;
-            if((sentence = postProcess(sentence)) != null) processed.add(sentence);
+            if(o instanceof String) {
+                String sentence = (String) o;
+                if ((sentence = postProcess(sentence)) != null) processed.add(sentence);
+            } else {
+                JSONObject jo = (JSONObject) o;
+                JSONArray array = (JSONArray) ((JSONObject) jo.get("data")).get("Header");
+                for(Object s : array) {
+                    String sentence = (String) s;
+                    if ((sentence = postProcess(preprocess(sentence))) != null) processed.add(sentence);
+                }
+            }
         }
 
         JSONArray jsonArray = new JSONArray();
         for (String text : processed) jsonArray.add(text);
-
-        System.out.println(engc);
 
         try {
             BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(output)));
@@ -78,7 +111,7 @@ engc =0;
         Pattern english = Pattern.compile("[a-zA-Z]+");
         Pattern years = Pattern.compile("20[0-9]{2}");
         Pattern numStart = Pattern.compile("^[0-9]");
-        Pattern gameInfo = Pattern.compile("([0-9]\\.[0-9]*)|(공격력|방어력|게임 모드|미니언|플레이|패치|유닛|주문 피해|물리 피해|기본 생명력|군중 제어|경험치|획득량|재사용 대기|체력|매개변수|템플릿|시야 반경|면역|활성화|증가|감소|적 챔피언|아군 챔피언)");
+        Pattern gameInfo = Pattern.compile("([0-9]\\.[0-9]*)|(공격력|방어력|게임 모드|미니언|플레이|패치|유닛|주문 피해|물리 피해|기본 생명력|군중 제어|경험치|획득량|재사용 대기|체력|매개변수|템플릿|시야 반경|면역|활성화|증가|감소|적 챔피언|아군 챔피언|컨셉 아트|일러스트|게임|모델|자세히 보기|지역 보기)");
 
         // 연도 정보가 포함되어 있으면 이벤트 정보일 확률이 높음.
         if(years.matcher(text).find()) return null;
@@ -161,7 +194,6 @@ engc =0;
 
         // 이후 영어가 남아있는 경우 보통 의미 없는 문장인 경우가 많음.
         if(english.matcher(text).find()) {
-            ++engc;
             return null;
         }
 
@@ -170,6 +202,14 @@ engc =0;
 
         // -로 시작하는 문장은 앞의 -를 제거
         if(text.startsWith("-")) text = text.replace("-", "");
+
+        // ~가 들어가면서 그 뒤가 10글자 이내인 경우, 챔피언의 대사로 처리한다.
+        if(text.contains("~")) {
+            String[] split = text.split("~");
+            if(split[1].length() < 10) {
+                text = String.format("%s는 말했다. %s", split[1], split[0]);
+            }
+        }
 
         // 불필요한 공백 제거
         return text.trim();
