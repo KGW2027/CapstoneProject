@@ -62,6 +62,8 @@ public class FandomSearcher extends CrawlingSearcher {
         WebElement docList = element.findElement(By.cssSelector("#mw-content-text > div.category-page__members"));
         List<WebElement> buttons = docList.findElements(By.tagName("a"));
         for(WebElement btn : buttons) {
+            String btnTag = btn.getAttribute("title");
+            if(exceptTitle(btnTag)) continue;
             queue.addQueue(body.URL_PREFIX, btn.getAttribute("href"));
         }
     }
