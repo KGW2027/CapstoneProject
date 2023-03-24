@@ -14,7 +14,6 @@ public class UniverseKoSearcher extends CrawlingSearcher {
 
     @Override
     public void search(String docName, CrawlingQueue queue, WebElement element) {
-        super.search(docName, queue, element);
 
         WebElement appDiv = element.findElement(By.id("App"));
         WebElement contentDiv = appDiv.findElement(By.xpath(".//div[@id='Content']"));

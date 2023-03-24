@@ -4,7 +4,7 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Queue;
 
-public class CrawlingQueue {
+public abstract class CrawlingQueue {
 
     private Queue<String> preSearchQueue, postSearchQueue;
     private HashSet<String> searchedSrc;
@@ -21,13 +21,9 @@ public class CrawlingQueue {
         return searched;
     }
 
-    protected String preprocess(String url) {
-        return url;
-    }
+    protected abstract String preprocess(String url);
 
-    public boolean isPreSearch(String url) {
-        return false;
-    }
+    public abstract boolean isPreSearch(String url);
 
     public void addQueue(String url) {
         url = preprocess(url.toLowerCase());
