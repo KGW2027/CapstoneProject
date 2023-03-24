@@ -6,12 +6,13 @@ import org.example.crawler.CrawlingQueue;
 public class FandomCrawler {
 
     public static void main(String[] args) {
-        String prefix = "https://leagueoflegends.fandom.com/wiki/";
+        String prefix = "https://leagueoflegends.fandom.com/wiki";
 
         CrawlingQueue queue = new FandomQueue();
-        new CrawlerBody("univ_en", prefix, queue, new FandomSearcher())
-                .setWaitCss("div.pageLoaded.hidden")
-                .addQueueManually("/Category:Lore")
+        new CrawlerBody("fandom", prefix, queue, new FandomSearcher())
+//                .addQueueManually("/Category:Lore")
+                .addQueueManually("/Garen")
+//                .setHeadless()
                 .addBlacklist("comic")
                 .start();
     }
