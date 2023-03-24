@@ -10,10 +10,8 @@ public class FandomCrawler {
 
         CrawlingQueue queue = new FandomQueue();
         new CrawlerBody("fandom", prefix, queue, new FandomSearcher())
-//                .addQueueManually("/Category:Lore")
-                .addQueueManually("/Garen")
+                .addQueueManually("/Category:Lore")
 //                .setHeadless()
-                .addBlacklist("comic")
                 .start();
     }
 }

@@ -1,18 +1,14 @@
 package org.example.crawler;
 
+import org.example.ChromeDriver;
 import org.json.simple.JSONObject;
-import org.openqa.selenium.*;
-import org.openqa.selenium.chrome.ChromeDriver;
-import org.openqa.selenium.chrome.ChromeOptions;
+import org.openqa.selenium.By;
+import org.openqa.selenium.TimeoutException;
 import org.openqa.selenium.support.ui.ExpectedConditions;
-import org.openqa.selenium.support.ui.WebDriverWait;
 
-import java.io.File;
 import java.io.IOException;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
 /*
  * CrawlerBody is Controller of crawler.
@@ -26,36 +22,26 @@ import java.util.Set;
 public class CrawlerBody {
 
     public final String URL_PREFIX;
-    private WebDriver driver;
-    private CrawlingDatas cDatas;
+//    private WebDriver driver;
+    private CrawlingDatas crawlDatas;
     private CrawlingQueue queue;
     private CrawlingSearcher searcher;
-    private ChromeOptions options;
     private List<String> blacklists;
-    private String waitCss, name;
+    private String waitCss;
+
+    private ChromeDriver driver;
 
     public CrawlerBody(String name, String urlPrefix, CrawlingQueue queue, CrawlingSearcher searcher) {
-        this.cDatas = new CrawlingDatas(name);
-        this.name = name;
+        this.crawlDatas = new CrawlingDatas(name);
         this.URL_PREFIX = urlPrefix.toLowerCase();
         this.queue = queue;
         this.searcher = searcher.setBody(this);
         this.waitCss = "";
         this.blacklists = new ArrayList<>();
 
-//        this.queue.addQueue(URL_PREFIX);
         this.searcher.addExpectPrefix(URL_PREFIX);
-
-        String DRIVER = "./module/chromedriver_win32/chromedriver.exe";
-        System.setProperty("webdriver.chrome.driver", new File(DRIVER).getAbsolutePath());
-
-        ChromeOptions options = new ChromeOptions();
-//        options.addArguments("headless");
-        options.addArguments("--disable-popup-blocking");
-        options.addArguments("--remote-allow-origins=*");
-        options.addArguments("--disable-gpu");
-
-        this.options = options;
+        driver = new ChromeDriver()
+                .setTimeout(10L);
     }
 
     /**
@@ -64,7 +50,7 @@ public class CrawlerBody {
      * @return self
      */
     public CrawlerBody setWaitCss(String waitCss) {
-        this.waitCss = waitCss;
+        this.driver.setWait(ExpectedConditions.presenceOfElementLocated(By.cssSelector(waitCss)));
         return this;
     }
 
@@ -93,7 +79,7 @@ public class CrawlerBody {
      * @return self
      */
     public CrawlerBody setHeadless() {
-        options.addArguments("headless");
+        this.driver.enableHeadlessMode();
         return this;
     }
 
@@ -103,11 +89,11 @@ public class CrawlerBody {
      * @param data 문서 데이터
      */
     public void addCrawlingData(String docName, CrawlingData data) {
-        cDatas.put(docName, data);
+        crawlDatas.put(docName, data);
     }
 
     public void addCrawlingData(String docName, JSONObject data) {
-        cDatas.put(docName, data);
+        crawlDatas.put(docName, data);
     }
 
     /**
@@ -131,22 +117,28 @@ public class CrawlerBody {
         return url.toLowerCase().startsWith(URL_PREFIX) && !isBlacklist(url);
     }
 
+    /**
+     * 저장
+     * @param attempt 탐색한 문서 수
+     */
+    private void save(int attempt) {
+        try {
+            crawlDatas.clearName();
+            crawlDatas.appendDate();
+            crawlDatas.appendNum(attempt);
+            crawlDatas.save();
+        } catch (IOException e) {
+            System.out.printf("[저장 중 에러가 발생했습니다. :: %s]\n", e.getMessage());
+        }
+    }
+
     public void start() {
-        driver = new ChromeDriver(options);
-        if(waitCss.equals("")) waitCss = "body";
+        if(waitCss.equals("")) setWaitCss("body");
+        driver.init();
 
         int attempt = 0;
         while(!queue.isEmpty()) {
-            if(attempt % 100 == 0) {
-                try {
-                    cDatas.clearName();
-                    cDatas.appendDate();
-                    cDatas.appendNum(attempt);
-                    cDatas.save();
-                } catch (IOException e) {
-                    System.out.printf("[저장 중 에러가 발생했습니다. :: %s]\n", e.getMessage());
-                }
-            }
+            if(attempt % 100 == 0) save(attempt);
 
             String url = queue.poll();
             if(!isTargetDocs(url)) continue;
@@ -154,8 +146,7 @@ public class CrawlerBody {
             System.out.printf("[Attempt %04d] %s\n", ++attempt, url);
 
             try {
-                driver.get(url);
-                new WebDriverWait(driver, Duration.ofSeconds(10L)).until(ExpectedConditions.presenceOfElementLocated(By.cssSelector(waitCss)));
+                driver.connect(url);
             } catch (TimeoutException timeout) {
                 System.out.printf("[URL %s]에 대한 탐색 중 시간초과 발생\n", url);
             }
@@ -163,21 +154,15 @@ public class CrawlerBody {
             try {
                 searcher.search(url.replace(URL_PREFIX, ""), queue, driver.findElement(By.tagName("body")));
             } catch (Exception ex) {
-                System.out.printf("[URL %s]에 대한 탐색 중 오류 발생 :: %s\n", url, ex.getMessage());
+                System.out.printf("[URL %s]에 대한 탐색 중 오류 발생 ===== ===== ===== =====\n", url);
+                ex.printStackTrace();
+                System.out.println("\n===== ===== ===== ===== ===== ===== ===== =====\n");
             }
 
             System.out.printf("현재 Queue size => [PRE] %d [POST] %d\n", queue.size()[0], queue.size()[1]);
         }
 
-        cDatas.clearName();
-        cDatas.appendDate();
-        cDatas.appendNum(attempt);
-        try {
-            cDatas.save();
-        } catch (IOException e) {
-            System.out.printf("[최종 저장 중 에러가 발생했습니다.ㅠㅠ :: %s]\n", e.getMessage());
-        }
-
+        save(attempt);
         driver.close();
     }
 }

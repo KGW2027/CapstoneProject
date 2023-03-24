@@ -111,11 +111,14 @@ public class FandomSearcher extends CrawlingSearcher {
                     innerContexts.add(wp.make());
 
                 wp = exceptTitle(child.getText()) ? null : new WikiParser(child.getText());
-            } else if (tagName.startsWith("h")) {
+                continue;
+            }
+
+            if (wp == null) continue;
+
+            if (tagName.startsWith("h")) {
                 wp.setPath(tagName, child.getText().trim());
-            } else if (tagName.startsWith("d")) {
-            } else {
-                if(wp == null) continue;
+            } else if (!tagName.startsWith("d")) { // d Tag는 다른 문서의 안내 등의 텍스트 포함
                 wp.push(child);
             }
         }
@@ -139,7 +142,7 @@ public class FandomSearcher extends CrawlingSearcher {
     
     private boolean passCategory(WebElement category) {
         List<WebElement> categories = category.findElements(By.tagName("a"));
-        Pattern except = Pattern.compile("(comic|tabletop|audio|video|image|icon|voice|chroma|tile|loading|skin|circle|square|item|abilities|games)");
+        Pattern except = Pattern.compile("(comic|tabletop|audio|video|image|icon|voice|chroma|tile|loading|skin|circle|square|item|abilities|games|staff)");
         for(WebElement cat : categories) {
             String text = cat.getAttribute("title");
             if(!text.startsWith("Category")) continue;

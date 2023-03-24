@@ -21,7 +21,7 @@ public class ChromeDriver {
     private long timeout;
     private ExpectedCondition waitCondition;
     private boolean vpnSetted;
-    private final boolean isUseVpn = false;
+    private boolean isUseVpn, firstInit;
 
     public ChromeDriver() {
         String DRIVER = "./module/chromedriver_win32/chromedriver.exe";
@@ -31,9 +31,10 @@ public class ChromeDriver {
         options.addArguments("--disable-popup-blocking");
         options.addArguments("--remote-allow-origins=*");
         options.addArguments("--disable-gpu");
-        if(isUseVpn)
-            options.addExtensions(new File("./module/holavpn.crx"));
         timeout = 10L;
+
+        firstInit = true;
+        isUseVpn = false;
     }
 
     public ChromeDriver setTimeout(long time) {
@@ -47,6 +48,10 @@ public class ChromeDriver {
     }
 
     public ChromeDriver init() {
+        if(isUseVpn && firstInit) {
+            firstInit = false;
+            options.addExtensions(new File("./module/vpn.crx"));
+        }
         driver = new org.openqa.selenium.chrome.ChromeDriver(options);
         vpnSetted = false;
         return this;
@@ -57,9 +62,18 @@ public class ChromeDriver {
         return this;
     }
 
+    public ChromeDriver setVpnUsable(boolean usable) {
+        isUseVpn = usable;
+        return this;
+    }
+
     public void reconnect() {
         driver.close();
         init();
+    }
+
+    public void close() {
+        driver.close();
     }
 
     public void connect(String url) throws TimeoutException {
@@ -78,6 +92,10 @@ public class ChromeDriver {
 
     public List<WebElement> findElements(By condition) {
         return driver.findElements(condition);
+    }
+
+    public WebElement findElement(By condition) {
+        return findElements(condition).get(0);
     }
 
     public static ExpectedCondition<Boolean> attributeToBeNotEmpty(By locator, String attributeName) {
