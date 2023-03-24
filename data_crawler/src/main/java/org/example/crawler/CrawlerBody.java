@@ -174,6 +174,9 @@ public class CrawlerBody {
         threadDriver.init();
         boolean syncWait = false;
 
+        int selfAttempt = 0;
+        String threadName = Thread.currentThread().getName();
+
         do {
 
             String url = queue.poll();
@@ -190,7 +193,7 @@ public class CrawlerBody {
             if(!isTargetDocs(url)) continue;
 
             addAttempt();
-            System.out.printf("[Attempt %04d] %s\n", getAttempt(), url);
+            System.out.printf("[%s-%03d :: Attempt %04d] %s\n", threadName, ++selfAttempt, getAttempt(), url);
 
             try {
                 threadDriver.connect(url);
