@@ -135,7 +135,7 @@ public class CrawlerBody {
      * 저장
      * @param attempt 탐색한 문서 수
      */
-    private void save(int attempt) {
+    private synchronized void save(int attempt) {
         try {
             crawlDatas.clearName();
             crawlDatas.appendDate();
@@ -165,8 +165,7 @@ public class CrawlerBody {
         return attempt;
     }
     private synchronized void addAttempt() {
-        attempt += 1;
-        if(attempt % 100 == 0) save(attempt);
+        if(++attempt % 100 == 0) save(attempt);
     }
 
     private void run() {

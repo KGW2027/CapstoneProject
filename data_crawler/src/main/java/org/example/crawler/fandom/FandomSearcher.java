@@ -8,6 +8,7 @@ import org.openqa.selenium.By;
 import org.openqa.selenium.WebElement;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.regex.Pattern;
 
@@ -63,7 +64,7 @@ public class FandomSearcher extends CrawlingSearcher {
         List<WebElement> buttons = docList.findElements(By.tagName("a"));
         for(WebElement btn : buttons) {
             String btnTag = btn.getAttribute("title");
-            if(btnTag.indexOf(':') > 0 && exceptTitle(btnTag.split(":")[0])) continue;
+            if(btnTag.indexOf(':') >= 0 && passCategory(btnTag.split(":")[0])) continue;
             queue.addQueue(body.URL_PREFIX, btn.getAttribute("href"));
         }
     }
@@ -144,18 +145,22 @@ public class FandomSearcher extends CrawlingSearcher {
     
     private boolean passCategory(WebElement category) {
         List<WebElement> categories = category.findElements(By.tagName("a"));
-        Pattern except = Pattern.compile("(comic|tabletop|audio|video|image|icon|voice|chroma|tile|loading|skin|circle|square|item|abilities|games|staff|file)");
         for(WebElement cat : categories) {
             String text = cat.getAttribute("title");
             if(!text.startsWith("Category")) continue;
-            if(except.matcher(text).find())
+            if(passCategory(text))
                 return false;
         }
 
         return true;
     }
 
-    private boolean exceptTitle(String title) {
+    private boolean passCategory(String text) {
+        Pattern except = Pattern.compile("(comic|tabletop|audio|video|image|icon|voice|chroma|tile|loading|skin|circle|square|item|abilities|games|staff|file|template|user)");
+        return except.matcher(text.toLowerCase()).find();
+    }
+
+    private synchronized boolean exceptTitle(String title) {
         Pattern except = Pattern.compile("(references|trivia|media|see also|recipe|change log|categories|languages|read more)");
         return except.matcher(title.toLowerCase()).find();
     }
