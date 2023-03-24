@@ -63,7 +63,7 @@ public class FandomSearcher extends CrawlingSearcher {
         List<WebElement> buttons = docList.findElements(By.tagName("a"));
         for(WebElement btn : buttons) {
             String btnTag = btn.getAttribute("title");
-            if(exceptTitle(btnTag)) continue;
+            if(btnTag.indexOf(':') > 0 && exceptTitle(btnTag.split(":")[0])) continue;
             queue.addQueue(body.URL_PREFIX, btn.getAttribute("href"));
         }
     }
@@ -144,7 +144,7 @@ public class FandomSearcher extends CrawlingSearcher {
     
     private boolean passCategory(WebElement category) {
         List<WebElement> categories = category.findElements(By.tagName("a"));
-        Pattern except = Pattern.compile("(comic|tabletop|audio|video|image|icon|voice|chroma|tile|loading|skin|circle|square|item|abilities|games|staff)");
+        Pattern except = Pattern.compile("(comic|tabletop|audio|video|image|icon|voice|chroma|tile|loading|skin|circle|square|item|abilities|games|staff|file)");
         for(WebElement cat : categories) {
             String text = cat.getAttribute("title");
             if(!text.startsWith("Category")) continue;
