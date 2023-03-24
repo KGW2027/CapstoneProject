@@ -10,20 +10,89 @@ import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
 import java.io.*;
-import java.util.HashSet;
-import java.util.Objects;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class ResultProcessor {
 
     public static void main(String[] args) throws IOException, ParseException {
-        new ResultProcessor("./data/processing/fandom-en.json")
-                .process();
-        new ResultProcessor("./data/processing/univ-en.json")
-                .process();
-        new ResultProcessor("./data/processing/univ-ko.json")
-                .process();
+//        new ResultProcessor("./data/processing/fandom-en.json")
+//                .process();
+//        new ResultProcessor("./data/processing/univ-en.json")
+//                .process();
+//        new ResultProcessor("./data/processing/univ-ko.json")
+//                .process();
+
+        StringBuilder sb = new StringBuilder();
+        BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream("./data/processing/fandom-en2.json")));
+        String line;
+
+        HashMap<String, Integer> appear_map = new HashMap<>();
+        Pattern ptn = Pattern.compile("(development|roadmap|champion|gameplay|release|version|update|rework|report|support|seasons|event|strategy|tricks|only|visual|upgrade|note)");
+        Pattern otherGame = Pattern.compile("(LoR|TFT)");
+
+        while((line=br.readLine()) != null) sb.append(line);
+        JSONArray ja = (JSONArray) (new JSONParser().parse(sb.toString()));
+        JSONArray newArray = new JSONArray();
+        for(Object o : ja) {
+            JSONObject jo = (JSONObject) o;
+
+            String title = jo.get("title").toString();
+            if(otherGame.matcher(title).find()) {
+                System.out.printf("%s는 게임과 관련된 내용으로 판단되어 삭제됩니다.\n", title);
+                continue;
+            }
+
+            JSONArray newInner = new JSONArray();
+            int count = 0;
+            for(Object o2 : (JSONArray) ((JSONObject) jo.get("data")).get("inner")) {
+                JSONObject jo2 = (JSONObject) o2;
+                if(jo2.keySet().size() == 0) continue;
+                List<String> removes = new ArrayList<>();
+                for(Object k : jo2.keySet()) {
+                    String ks = k.toString();
+                    if(ptn.matcher(ks.toLowerCase()).find()) {
+                        removes.add(ks);
+                        continue;
+                    }
+
+                    appear_map.put(ks, appear_map.getOrDefault(ks, 0)+1);
+                }
+                for(String rem : removes) jo2.remove(rem);
+
+                newInner.add(o2);
+                count += jo2.size();
+            }
+
+            if(count == 0) {
+                System.out.printf("%s는 data 수가 0개이므로 삭제됩니다.\n", title);
+                continue;
+            }
+            JSONObject data = (JSONObject) jo.get("data");
+            data.put("inner", newInner);
+            if(data.keySet().contains("quotes") && ((JSONArray) data.get("quotes")).size() == 0) data.remove("quotes");
+
+            newArray.add(jo);
+        }
+
+        for(String k : appear_map.keySet()) System.out.printf("%s : %,3d\n", k, appear_map.get(k));
+        System.out.printf("Keys : %,3d\n", appear_map.size());
+
+
+        try {
+            File output = new File("./data/processing/fandom-en2.json");
+            if(!output.exists()) output.createNewFile();
+
+            BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(output)));
+            Gson gson = new GsonBuilder().setPrettyPrinting().create();
+            JsonElement ge = JsonParser.parseString(newArray.toJSONString());
+            writer.write(gson.toJson(ge));
+            writer.flush();
+            writer.close();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
 

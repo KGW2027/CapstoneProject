@@ -31,6 +31,11 @@ public abstract class CrawlingQueue {
         return this;
     }
 
+    public CrawlingQueue setSavemode(boolean needSave) {
+        cached = !needSave;
+        return this;
+    }
+
     protected CrawlingQueue(String name) {
         preSearchQueue = new LinkedList<>();
         postSearchQueue = new LinkedList<>();

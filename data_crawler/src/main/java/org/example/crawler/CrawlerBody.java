@@ -203,9 +203,11 @@ public class CrawlerBody {
             try {
                 searcher.search(url.replace(URL_PREFIX, ""), queue, threadDriver.findElement(By.tagName("body")));
             } catch (Exception ex) {
+                System.out.printf("===> ! %s ! <====\n", ex.getClass().toString());
                 System.out.printf("[Thread-%s][URL %s]에 대한 탐색 중 오류 발생\n", Thread.currentThread().getName(), url);
-                System.out.printf("[%s] %s\n", ex.getClass(), ex.getMessage());
-                System.out.printf("CAUSE : %s\n", ex.getCause().getMessage());
+                for(StackTraceElement stacktrace : ex.getStackTrace()) {
+                    System.out.println(stacktrace.toString());
+                }
             }
 
             int[] size = queue.size();

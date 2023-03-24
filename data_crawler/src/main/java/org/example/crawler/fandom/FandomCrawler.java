@@ -10,10 +10,12 @@ public class FandomCrawler {
         String key = "Fandom";
 
         CrawlingQueue queue = new FandomQueue(key)
-//                .loadCache()
+                .setSavemode(false)
+                .loadCache()
                 ;
         new CrawlerBody("fandom", prefix, queue, new FandomSearcher())
-                .addQueueManually("/Category:Lore")
+//                .addQueueManually("/Category:Lore")
+//                .addQueueManually("/The_Great_City_of_Demacia")
                 .setThreadCount(4)
                 .setHeadless()
                 .start();
