@@ -1,18 +1,42 @@
 package org.example.crawler;
 
+import java.io.*;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Queue;
 
 public abstract class CrawlingQueue {
 
+    private static final String cache_dir = "./data/queue_cache/%s.cache";
+
     private Queue<String> preSearchQueue, postSearchQueue;
     private HashSet<String> searchedSrc;
+    private boolean cached;
+    private String name;
 
-    protected CrawlingQueue() {
+
+    public CrawlingQueue loadCache() {
+        File cache = new File(String.format(cache_dir, name));
+        if(!cache.exists()) return null;
+        try {
+            ObjectInputStream ois = new ObjectInputStream(new FileInputStream(cache));
+            postSearchQueue = (Queue<String>) ois.readObject();
+            searchedSrc = (HashSet<String>) ois.readObject();
+            ois.close();
+            cached = true;
+        } catch (IOException | ClassNotFoundException e) {
+            e.printStackTrace();
+            throw new RuntimeException(e);
+        }
+        return this;
+    }
+
+    protected CrawlingQueue(String name) {
         preSearchQueue = new LinkedList<>();
         postSearchQueue = new LinkedList<>();
         searchedSrc = new HashSet<>();
+        cached = false;
+        this.name = name;
     }
 
     private boolean isSearched(String url) {
@@ -37,10 +61,12 @@ public abstract class CrawlingQueue {
     public abstract boolean isPreSearch(String url);
 
     public synchronized void addQueue(String prefix, String url) {
-        url = preprocess(prefix, url.toLowerCase());
+        url = preprocess(prefix, url);
         if(isSearched(url)) return;
 
-        if(isPreSearch(url)) preSearchQueue.add(url);
+        String path = url.replace(prefix, "");
+        if(path.indexOf('/') == 0) path = path.substring(1);
+        if(isPreSearch(path)) preSearchQueue.add(url);
         else postSearchQueue.add(url);
     }
 
@@ -49,6 +75,25 @@ public abstract class CrawlingQueue {
     }
 
     public synchronized String poll() {
+        if(preSearchQueue.isEmpty() && !postSearchQueue.isEmpty() && !cached) {
+            try {
+                File cacheFile = new File(String.format(cache_dir, name));
+                if(!cacheFile.getParentFile().exists()) cacheFile.getParentFile().mkdirs();
+                if(!cacheFile.exists()) cacheFile.createNewFile();
+
+                ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(String.format(cache_dir, name)));
+                oos.writeObject(postSearchQueue);
+                oos.writeObject(searchedSrc);
+                oos.flush();
+                oos.close();
+                cached = true;
+                System.out.println("POST 캐시 저장에 완료하였습니다.");
+            } catch (IOException e) {
+                System.out.println("Cache 저장에 실패하였습니다.");
+                e.printStackTrace();
+            }
+        }
+
         return preSearchQueue.size() == 0 ? postSearchQueue.poll() : preSearchQueue.poll();
     }
 

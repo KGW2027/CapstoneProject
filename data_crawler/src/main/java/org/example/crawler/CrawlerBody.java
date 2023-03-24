@@ -65,7 +65,7 @@ public class CrawlerBody {
      * @return self
      */
     public CrawlerBody addQueueManually(String url) {
-        this.queue.addQueue(URL_PREFIX, url.toLowerCase());
+        this.queue.addQueue(URL_PREFIX, url);
         return this;
     }
 
@@ -103,11 +103,11 @@ public class CrawlerBody {
      * @param docName 문서 제목
      * @param data 문서 데이터
      */
-    public void addCrawlingData(String docName, CrawlingData data) {
+    public synchronized void addCrawlingData(String docName, CrawlingData data) {
         crawlDatas.put(docName, data);
     }
 
-    public void addCrawlingData(String docName, JSONObject data) {
+    public synchronized void addCrawlingData(String docName, JSONObject data) {
         crawlDatas.put(docName, data);
     }
     /**

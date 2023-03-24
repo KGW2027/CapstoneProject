@@ -34,6 +34,7 @@ public class CrawlingDatas extends HashMap<String, Object> {
             else if(value instanceof JSONObject)
                 jo.put("data", value);
 
+            if(((JSONObject)jo.get("data")).size() == 0) continue;
             array.add(jo);
         }
         Gson gson = new GsonBuilder().setPrettyPrinting().create();
@@ -42,6 +43,8 @@ public class CrawlingDatas extends HashMap<String, Object> {
     }
 
     public void save() throws IOException {
+        if(keySet().size() == 0) return;
+
         if(fileName.equals("")) fileName = "save_ckpt";
         String dir = FILE_PARENT.replace("{title}", title).replace("{text}", fileName);
         File file = new File(dir);

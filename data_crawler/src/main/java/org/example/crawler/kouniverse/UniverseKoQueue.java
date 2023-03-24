@@ -4,8 +4,8 @@ import org.example.crawler.CrawlingQueue;
 
 public class UniverseKoQueue extends CrawlingQueue {
 
-    public UniverseKoQueue() {
-        super();
+    public UniverseKoQueue(String name) {
+        super(name);
     }
 
     private final boolean isKorean = true;

@@ -98,14 +98,6 @@ public class ChromeDriver {
         return findElements(condition).get(0);
     }
 
-
-//    private ChromeOptions options;
-//    private WebDriver driver;
-//    private long timeout;
-//    private ExpectedCondition waitCondition;
-//    private boolean vpnSetted;
-//    private boolean isUseVpn, firstInit;
-
     public ChromeDriver clone() {
         ChromeDriver clone = new ChromeDriver();
         clone.isUseVpn = this.isUseVpn;

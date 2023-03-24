@@ -8,7 +8,6 @@ import org.openqa.selenium.By;
 import org.openqa.selenium.WebElement;
 
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.regex.Pattern;
 
@@ -41,8 +40,10 @@ public class FandomSearcher extends CrawlingSearcher {
 
         JSONObject make() {
             JSONObject object = new JSONObject();
-            for(String key : maps.keySet())
+            for(String key : maps.keySet()) {
+                if(maps.get(key).size() == 0) continue;
                 object.put(key, maps.get(key));
+            }
             return object;
         }
     }
@@ -53,7 +54,7 @@ public class FandomSearcher extends CrawlingSearcher {
 
     @Override
     public void search(String docName, CrawlingQueue queue, WebElement element) {
-        if(docName.contains("category"))
+        if(docName.toLowerCase().contains("category"))
             searchCategory(docName, queue, element);
         else
             searchDocument(docName, queue, element);
@@ -64,7 +65,8 @@ public class FandomSearcher extends CrawlingSearcher {
         List<WebElement> buttons = docList.findElements(By.tagName("a"));
         for(WebElement btn : buttons) {
             String btnTag = btn.getAttribute("title");
-            if(btnTag.indexOf(':') >= 0 && passCategory(btnTag.split(":")[0])) continue;
+            if(passCategory(btnTag))
+                continue;
             queue.addQueue(body.URL_PREFIX, btn.getAttribute("href"));
         }
     }
@@ -94,9 +96,11 @@ public class FandomSearcher extends CrawlingSearcher {
             JSONArray quoteArray = new JSONArray();
             for(int n = 0 ; n < quotes.size() ; n++) {
                 WebElement quote = quotes.get(n);
+                if(!quote.getAttribute("class").equals("")) continue;
+
                 JSONObject parse = parseQuote(quote);
-                if(parse == null) continue;
-                quoteArray.add(parseQuote(quote));
+                if(parse == null || parse.size() == 0) continue;
+                quoteArray.add(parse);
             }
             context.put("quotes", quoteArray);
         }
@@ -105,9 +109,21 @@ public class FandomSearcher extends CrawlingSearcher {
         List<WebElement> childs = contents.get(0).findElements(By.cssSelector(":scope > *"));
         WikiParser wp = null;
         JSONArray innerContexts = new JSONArray();
+        JSONArray special = new JSONArray();
+
         for(WebElement child : childs) {
             String tagName = child.getTagName();
-            if (tagName.equalsIgnoreCase("table")) continue;
+            if (tagName.equalsIgnoreCase("table")) {
+                String className = child.getAttribute("class");
+                if(className.equals("character-table")) {
+                    JSONObject cinfo = parseCharacterTable(child);
+                    if(cinfo == null || cinfo.size() == 0) continue;
+                    special.add(cinfo);
+                } else if(!className.equals("")) {
+                    System.out.printf("ELSE TABLE : %s\n", child.getAttribute("class"));
+                }
+                continue;
+            }
 
             if (tagName.equals("h2")) {
                 if (wp != null)
@@ -125,6 +141,8 @@ public class FandomSearcher extends CrawlingSearcher {
                 wp.push(child);
             }
         }
+        if(special.size() > 0)
+            context.put("special", special);
         context.put("inner", innerContexts);
 
         body.addCrawlingData(docName, context);
@@ -135,11 +153,38 @@ public class FandomSearcher extends CrawlingSearcher {
         List<WebElement> is =quote.findElements(By.tagName("i"));
         if(is.size() == 0) return null;
         String context = is.get(0).getText();
-        String writer = quote.findElement(By.cssSelector("tbody > tr:nth-child(2) > td > span > span:nth-child(2) > a")).getText();
+        String writer = quote.findElements(By.cssSelector("tbody > tr")).get(1).getText().substring(1).replaceAll(" {2,}", " ").trim();
+        writer = writer
+                .replace(" ", "_")
+                .replaceAll("^[0-9]+\\n_", "");
 
-        writer = writer.replace(" ", "_").toLowerCase();
         map.put("writer", writer);
         map.put("context", context);
+        return map;
+    }
+
+    private JSONObject parseCharacterTable(WebElement table) {
+        JSONObject map = new JSONObject();
+        List<WebElement> tableElements = table.findElements(By.cssSelector("tbody > tr"));
+        if(tableElements.size() < 1) return null;
+        map.put("name", tableElements.get(0).getText());
+        for(int idx = 1 ; idx < tableElements.size() ; idx++) {
+            WebElement child = tableElements.get(idx);
+            String key = child.findElement(By.cssSelector("th")).getText();
+            String val = child.findElement(By.cssSelector("td")).getText();
+            if(key.equalsIgnoreCase("referenced")) {
+                val = "";
+                for (WebElement a : child.findElements(By.cssSelector("td > a"))) {
+                    val = val + " " + a.getText();
+                }
+                if(val.equals("")) val = "None";
+            }
+
+            val = val.replaceAll(" {2,}", " ");
+            if(val.charAt(0) == ' ') val = val.substring(1);
+            map.put(key, val.trim());
+        }
+
         return map;
     }
     
@@ -156,12 +201,12 @@ public class FandomSearcher extends CrawlingSearcher {
     }
 
     private boolean passCategory(String text) {
-        Pattern except = Pattern.compile("(comic|tabletop|audio|video|image|icon|voice|chroma|tile|loading|skin|circle|square|item|abilities|games|staff|file|template|user)");
+        Pattern except = Pattern.compile("(comic|tabletop|audio|video|image|icon|voice|chroma|tile|loading|skin|circle|square|item|abilities|games|staff|file|template|user|old|event|cosmetics)");
         return except.matcher(text.toLowerCase()).find();
     }
 
     private synchronized boolean exceptTitle(String title) {
-        Pattern except = Pattern.compile("(references|trivia|media|see also|recipe|change log|categories|languages|read more)");
+        Pattern except = Pattern.compile("(references|trivia|media|see also|recipe|change log|categories|languages|read more|history)");
         return except.matcher(title.toLowerCase()).find();
     }
 }
