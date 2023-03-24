@@ -11,7 +11,8 @@ public class FandomCrawler {
         CrawlingQueue queue = new FandomQueue();
         new CrawlerBody("fandom", prefix, queue, new FandomSearcher())
                 .addQueueManually("/Category:Lore")
-//                .setHeadless()
+                .setThreadCount(4)
+                .setHeadless()
                 .start();
     }
 }

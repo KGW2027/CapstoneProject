@@ -36,7 +36,7 @@ public abstract class CrawlingQueue {
      */
     public abstract boolean isPreSearch(String url);
 
-    public void addQueue(String prefix, String url) {
+    public synchronized void addQueue(String prefix, String url) {
         url = preprocess(prefix, url.toLowerCase());
         if(isSearched(url)) return;
 
@@ -44,15 +44,15 @@ public abstract class CrawlingQueue {
         else postSearchQueue.add(url);
     }
 
-    public int[] size() {
+    public synchronized int[] size() {
         return new int[]{preSearchQueue.size(), postSearchQueue.size()};
     }
 
-    public String poll() {
+    public synchronized String poll() {
         return preSearchQueue.size() == 0 ? postSearchQueue.poll() : preSearchQueue.poll();
     }
 
-    public boolean isEmpty() {
+    public synchronized boolean isEmpty() {
         return preSearchQueue.isEmpty() && postSearchQueue.isEmpty();
     }
 }

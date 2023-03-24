@@ -98,6 +98,23 @@ public class ChromeDriver {
         return findElements(condition).get(0);
     }
 
+
+//    private ChromeOptions options;
+//    private WebDriver driver;
+//    private long timeout;
+//    private ExpectedCondition waitCondition;
+//    private boolean vpnSetted;
+//    private boolean isUseVpn, firstInit;
+
+    public ChromeDriver clone() {
+        ChromeDriver clone = new ChromeDriver();
+        clone.isUseVpn = this.isUseVpn;
+        clone.options = this.options;
+        clone.timeout = this.timeout;
+        clone.waitCondition = this.waitCondition;
+        return clone;
+    }
+
     public static ExpectedCondition<Boolean> attributeToBeNotEmpty(By locator, String attributeName) {
         return driver -> {
             WebElement element = driver.findElement(locator);

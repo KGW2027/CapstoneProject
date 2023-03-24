@@ -9,6 +9,8 @@ import org.openqa.selenium.support.ui.ExpectedConditions;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /*
  * CrawlerBody is Controller of crawler.
@@ -28,6 +30,7 @@ public class CrawlerBody {
     private CrawlingSearcher searcher;
     private List<String> blacklists;
     private String waitCss;
+    private int threadCount, attempt;
 
     private ChromeDriver driver;
 
@@ -38,6 +41,8 @@ public class CrawlerBody {
         this.searcher = searcher.setBody(this);
         this.waitCss = "";
         this.blacklists = new ArrayList<>();
+        this.threadCount = 1;
+        this.attempt = 0;
 
         this.searcher.addExpectPrefix(URL_PREFIX);
         driver = new ChromeDriver()
@@ -84,6 +89,16 @@ public class CrawlerBody {
     }
 
     /**
+     * 동시에 몇 개의 브라우저로 크롤링을 진행할 지 정한다.
+     * @param count 병렬 작업 개수
+     * @return self
+     */
+    public CrawlerBody setThreadCount(int count) {
+        this.threadCount = count;
+        return this;
+    }
+
+    /**
      * 외부에서 크롤링 데이터를 받기위한 메소드
      * @param docName 문서 제목
      * @param data 문서 데이터
@@ -95,7 +110,6 @@ public class CrawlerBody {
     public void addCrawlingData(String docName, JSONObject data) {
         crawlDatas.put(docName, data);
     }
-
     /**
      * URL에 블랙리스트의 단어들이 들어가있는지 확인함.
      * @param url 타겟 URL
@@ -132,37 +146,72 @@ public class CrawlerBody {
         }
     }
 
+    /**
+     * 탐색 시작
+     */
     public void start() {
         if(waitCss.equals("")) setWaitCss("body");
-        driver.init();
+        ExecutorService executor = Executors.newFixedThreadPool(this.threadCount);
+        for(int cnt = 0 ; cnt < this.threadCount ; cnt++) {
+            executor.submit(this::run);
+        }
+    }
 
-        int attempt = 0;
-        while(!queue.isEmpty()) {
-            if(attempt % 100 == 0) save(attempt);
+    /**
+     * 자동 저장을 위한 Attempt, 멀티 스레드를 위해 동기로 처리
+     * @return attempt
+     */
+    private synchronized int getAttempt() {
+        return attempt;
+    }
+    private synchronized void addAttempt() {
+        attempt += 1;
+        if(attempt % 100 == 0) save(attempt);
+    }
+
+    private void run() {
+        ChromeDriver threadDriver = driver.clone();
+        threadDriver.init();
+        boolean syncWait = false;
+
+        do {
 
             String url = queue.poll();
+            if(url == null) {
+                if(syncWait) break;
+                syncWait = true;
+                try {
+                    Thread.sleep(10 * 1000);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+                continue;
+            }
             if(!isTargetDocs(url)) continue;
 
-            System.out.printf("[Attempt %04d] %s\n", ++attempt, url);
+            addAttempt();
+            System.out.printf("[Attempt %04d] %s\n", getAttempt(), url);
 
             try {
-                driver.connect(url);
+                threadDriver.connect(url);
             } catch (TimeoutException timeout) {
                 System.out.printf("[URL %s]에 대한 탐색 중 시간초과 발생\n", url);
             }
 
             try {
-                searcher.search(url.replace(URL_PREFIX, ""), queue, driver.findElement(By.tagName("body")));
+                searcher.search(url.replace(URL_PREFIX, ""), queue, threadDriver.findElement(By.tagName("body")));
             } catch (Exception ex) {
-                System.out.printf("[URL %s]에 대한 탐색 중 오류 발생 ===== ===== ===== =====\n", url);
-                ex.printStackTrace();
-                System.out.println("\n===== ===== ===== ===== ===== ===== ===== =====\n");
+                System.out.printf("[Thread-%s][URL %s]에 대한 탐색 중 오류 발생\n", Thread.currentThread().getName(), url);
+                System.out.printf("[%s] %s\n", ex.getClass(), ex.getMessage());
+                System.out.printf("CAUSE : %s\n", ex.getCause().getMessage());
             }
 
-            System.out.printf("현재 Queue size => [PRE] %d [POST] %d\n", queue.size()[0], queue.size()[1]);
-        }
+            int[] size = queue.size();
+            System.out.printf("현재 Queue size => [PRE] %d [POST] %d\n", size[0], size[1]);
+
+        }while(!queue.isEmpty());
 
         save(attempt);
-        driver.close();
+        threadDriver.close();
     }
 }
