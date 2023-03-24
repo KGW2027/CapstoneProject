@@ -11,15 +11,10 @@ public class UniverseKoQueue extends CrawlingQueue {
     private final boolean isKorean = true;
 
     @Override
-    protected String preprocess(String url) {
-        String result = "";
-        if(isKorean) {
-            url = url.startsWith("/ko_kr") ? url.replace("/ko_kr", "") : url;
-            result = "https://universe.leagueoflegends.com/ko_kr" + url;
-        } else {
-            url = url.startsWith("/en_us") ? url.replace("/en_us", "") : url;
-            result = "https://universe.leagueoflegends.com/en_us" + url;
-        }
+    protected String preprocess(String prefix, String url) {
+        String url_prefix = isKorean ? "/ko_kr" : "/en_us";
+        url = url.startsWith(url_prefix) ? url.replace(url_prefix, "") : url;
+        String result = prefix + url;
 
         if(!result.endsWith("/")) result += '/';
         if(result.endsWith("//")) result = result.substring(0, result.length()-1);

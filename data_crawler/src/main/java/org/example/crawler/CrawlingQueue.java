@@ -21,12 +21,23 @@ public abstract class CrawlingQueue {
         return searched;
     }
 
-    protected abstract String preprocess(String url);
+    /**
+     * 사이트 URL을 통해 주소를 접속가능한 형태로 정제함.
+     * @param prefix 주소 접두사
+     * @param url 문서 경로
+     * @return 정제된 URL
+     */
+    protected abstract String preprocess(String prefix, String url);
 
+    /**
+     * 사이트 URL이 preQueue에 들어갈지 postQueue에 들어갈지 결정함
+     * @param url 정제된 주소
+     * @return preSearch대상이면 true, 그 외 false
+     */
     public abstract boolean isPreSearch(String url);
 
-    public void addQueue(String url) {
-        url = preprocess(url.toLowerCase());
+    public void addQueue(String prefix, String url) {
+        url = preprocess(prefix, url.toLowerCase());
         if(isSearched(url)) return;
 
         if(isPreSearch(url)) preSearchQueue.add(url);

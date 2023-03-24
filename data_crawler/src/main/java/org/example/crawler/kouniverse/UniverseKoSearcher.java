@@ -26,7 +26,7 @@ public class UniverseKoSearcher extends CrawlingSearcher {
         for(Element linker : linkers) {
             String href = linker.attr("href").toLowerCase();
             if(isExternalUrl(href)) continue;
-            queue.addQueue(href);
+            queue.addQueue(body.URL_PREFIX, href);
         }
 
         // 문서 정보 획득
