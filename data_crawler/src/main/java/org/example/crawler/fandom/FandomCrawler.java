@@ -15,7 +15,7 @@ public class FandomCrawler {
                 ;
         new CrawlerBody("fandom", prefix, queue, new FandomSearcher())
 //                .addQueueManually("/Category:Lore")
-//                .addQueueManually("/The_Great_City_of_Demacia")
+//                .addQueueManually("/Crystal_Scar")
                 .setThreadCount(4)
                 .setHeadless()
                 .start();

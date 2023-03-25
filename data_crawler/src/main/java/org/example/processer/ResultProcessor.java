@@ -1,5 +1,5 @@
-//package org.example.processer;
-//
+package org.example.processer;
+
 //import com.google.gson.Gson;
 //import com.google.gson.GsonBuilder;
 //import com.google.gson.JsonElement;
@@ -15,6 +15,7 @@
 //import java.util.regex.Pattern;
 //
 public class ResultProcessor {
+
 //
 //    private static void fandomPostProcess() throws IOException, ParseException {
 //
