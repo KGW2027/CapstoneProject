@@ -1,308 +1,251 @@
-package org.example.processer;
-
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonParser;
-import org.json.simple.JSONArray;
-import org.json.simple.JSONObject;
-import org.json.simple.parser.JSONParser;
-import org.json.simple.parser.ParseException;
-
-import java.io.*;
-import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
+//package org.example.processer;
+//
+//import com.google.gson.Gson;
+//import com.google.gson.GsonBuilder;
+//import com.google.gson.JsonElement;
+//import com.google.gson.JsonParser;
+//import org.json.simple.JSONArray;
+//import org.json.simple.JSONObject;
+//import org.json.simple.parser.JSONParser;
+//import org.json.simple.parser.ParseException;
+//
+//import java.io.*;
+//import java.util.*;
+//import java.util.regex.Matcher;
+//import java.util.regex.Pattern;
+//
 public class ResultProcessor {
-
-    public static void main(String[] args) throws IOException, ParseException {
-//        new ResultProcessor("./data/processing/fandom-en.json")
+//
+//    private static void fandomPostProcess() throws IOException, ParseException {
+//
+//        StringBuilder sb = new StringBuilder();
+//        BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream("./data/processing/fandom-en2.json")));
+//        String line;
+//
+//        HashMap<String, Integer> appear_map = new HashMap<>();
+//        Pattern ptn = Pattern.compile("(development|roadmap|gameplay|release|version|update|rework|report|support|seasons|event|strategy|tricks|only|visual|upgrade|note)");
+//        Pattern otherGame = Pattern.compile("(LoR|TFT)");
+//
+//        while((line=br.readLine()) != null) sb.append(line);
+//        JSONArray ja = (JSONArray) (new JSONParser().parse(sb.toString()));
+//        JSONArray newArray = new JSONArray();
+//        for(Object o : ja) {
+//            JSONObject jo = (JSONObject) o;
+//
+//            String title = jo.get("title").toString();
+//            Matcher titleMatcher = otherGame.matcher(title);
+//            if(titleMatcher.find()) {
+//                System.out.printf("%s는 게임과 관련된 내용으로 판단되어 삭제됩니다. [ matched : %s ]\n", title, titleMatcher.group());
+//                continue;
+//            }
+//
+//            JSONArray newInner = new JSONArray();
+//            int count = 0;
+//            JSONArray iter = (JSONArray) ((JSONObject) jo.get("data")).get("inner");
+//            if(iter != null) {
+//                for (Object o2 : iter) {
+//                    JSONObject jo2 = (JSONObject) o2;
+//                    if (jo2.keySet().size() == 0) continue;
+//                    List<String> removes = new ArrayList<>();
+//                    for (Object k : jo2.keySet()) {
+//                        String ks = k.toString();
+//                        if (ptn.matcher(ks.toLowerCase()).find()) {
+//                            removes.add(ks);
+//                            continue;
+//                        }
+//
+//                        appear_map.put(ks, appear_map.getOrDefault(ks, 0) + 1);
+//                    }
+//                    for (String rem : removes) jo2.remove(rem);
+//
+//                    newInner.add(o2);
+//                    count += jo2.size();
+//                }
+//            }
+//
+//            JSONObject data = (JSONObject) jo.get("data");
+//
+//            if(count == 0)
+//                data.remove("inner");
+//            else
+//                data.put("inner", newInner);
+//
+//            if(data.keySet().contains("quotes") && ((JSONArray) data.get("quotes")).size() == 0)
+//                data.remove("quotes");
+//
+//            if(jo.size() == 0)
+//                continue;
+//            newArray.add(jo);
+//        }
+//
+//        for(String k : appear_map.keySet()) System.out.printf("%s : %,3d\n", k, appear_map.get(k));
+//        System.out.printf("Keys : %,3d\n", appear_map.size());
+//
+//
+//        try {
+//            File output = new File("./data/processing/fandom-en2-process.json");
+//            if(!output.exists()) output.createNewFile();
+//
+//            BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(output)));
+//            Gson gson = new GsonBuilder().setPrettyPrinting().create();
+//            JsonElement ge = JsonParser.parseString(newArray.toJSONString());
+//            writer.write(gson.toJson(ge));
+//            writer.flush();
+//            writer.close();
+//        } catch (IOException e) {
+//            throw new RuntimeException(e);
+//        }
+//    }
+//
+//
+//    public static void main(String[] args) throws IOException, ParseException {
+////        new ResultProcessor("./data/processing/fandom-en.json")
+////                .process();
+////        new ResultProcessor("./data/processing/univ-en.json")
+////                .process();
+////        new ResultProcessor("./data/processing/univ-ko.json")
+////                .process();
+//        fandomPostProcess(); // File name : ./data/processing/fandom-en2.json
+//        new ResultProcessor("./data/processing/fandom-en2-process.json")
 //                .process();
-//        new ResultProcessor("./data/processing/univ-en.json")
-//                .process();
-//        new ResultProcessor("./data/processing/univ-ko.json")
-//                .process();
-
-        StringBuilder sb = new StringBuilder();
-        BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream("./data/processing/fandom-en2.json")));
-        String line;
-
-        HashMap<String, Integer> appear_map = new HashMap<>();
-        Pattern ptn = Pattern.compile("(development|roadmap|champion|gameplay|release|version|update|rework|report|support|seasons|event|strategy|tricks|only|visual|upgrade|note)");
-        Pattern otherGame = Pattern.compile("(LoR|TFT)");
-
-        while((line=br.readLine()) != null) sb.append(line);
-        JSONArray ja = (JSONArray) (new JSONParser().parse(sb.toString()));
-        JSONArray newArray = new JSONArray();
-        for(Object o : ja) {
-            JSONObject jo = (JSONObject) o;
-
-            String title = jo.get("title").toString();
-            if(otherGame.matcher(title).find()) {
-                System.out.printf("%s는 게임과 관련된 내용으로 판단되어 삭제됩니다.\n", title);
-                continue;
-            }
-
-            JSONArray newInner = new JSONArray();
-            int count = 0;
-            for(Object o2 : (JSONArray) ((JSONObject) jo.get("data")).get("inner")) {
-                JSONObject jo2 = (JSONObject) o2;
-                if(jo2.keySet().size() == 0) continue;
-                List<String> removes = new ArrayList<>();
-                for(Object k : jo2.keySet()) {
-                    String ks = k.toString();
-                    if(ptn.matcher(ks.toLowerCase()).find()) {
-                        removes.add(ks);
-                        continue;
-                    }
-
-                    appear_map.put(ks, appear_map.getOrDefault(ks, 0)+1);
-                }
-                for(String rem : removes) jo2.remove(rem);
-
-                newInner.add(o2);
-                count += jo2.size();
-            }
-
-            if(count == 0) {
-                System.out.printf("%s는 data 수가 0개이므로 삭제됩니다.\n", title);
-                continue;
-            }
-            JSONObject data = (JSONObject) jo.get("data");
-            data.put("inner", newInner);
-            if(data.keySet().contains("quotes") && ((JSONArray) data.get("quotes")).size() == 0) data.remove("quotes");
-
-            newArray.add(jo);
-        }
-
-        for(String k : appear_map.keySet()) System.out.printf("%s : %,3d\n", k, appear_map.get(k));
-        System.out.printf("Keys : %,3d\n", appear_map.size());
-
-
-        try {
-            File output = new File("./data/processing/fandom-en2.json");
-            if(!output.exists()) output.createNewFile();
-
-            BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(output)));
-            Gson gson = new GsonBuilder().setPrettyPrinting().create();
-            JsonElement ge = JsonParser.parseString(newArray.toJSONString());
-            writer.write(gson.toJson(ge));
-            writer.flush();
-            writer.close();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-
-    private JSONArray array;
-    private File output;
-    private JSONObject properMap;
-
-    private String preprocess(String line) {
-        return line.replace("“", "\"")
-                .replace("”", "\"")
-                .replace("’", "'")
-                .replace("‘", "'")
-                .replace("…", "...")
-                .replace("—", " ")
-                .replace("–", "")
-                .replace("ø", "o")
-                .replace("♥", "love")
-                .replace("á", "a")
-                .replace("ä", "a")
-                .replace("é", "e")
-                .replace("í", "i")
-                .replace("ö", "o")
-                .replace("ü", "u")
-                .replace("°", " degrees")
-                .replace("·", ",")
-                .replace("「", "\"")
-                .replace("」", "\"")
-                .replace("(bug)", "")
-                .replaceAll("\\[.*?\\]", "")
-                .replaceAll("\\(.*?\\)", "");
-    }
-
-    private ResultProcessor(String path) throws IOException, ParseException {
-
-        File properFile = new File("./data/propermap.json");
-        BufferedReader propReader = new BufferedReader(new InputStreamReader(new FileInputStream(properFile)));
-        String line;
-        StringBuilder builder = new StringBuilder();
-        while ((line = propReader.readLine()) != null) builder.append(line);
-        properMap = (JSONObject) new JSONParser().parse(builder.toString());
-
-        File file = new File(path);
-        BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(file)));
-        builder.setLength(0);
-
-        while ((line = reader.readLine()) != null) builder.append(line);
-        array = (JSONArray) new JSONParser().parse(builder.toString());
-
-        output = new File(path.replace(".json", "-process.json"));
-        if (!output.exists()) output.createNewFile();
-    }
-
-    private void process() {
-        HashSet<String> processed = new HashSet<>();
-
-        for (Object o : array) {
-            if(o instanceof String) {
-                String sentence = (String) o;
-                if ((sentence = postProcess(sentence)) != null) processed.add(sentence);
-            } else {
-                JSONObject jo = (JSONObject) o;
-                JSONArray array = (JSONArray) ((JSONObject) jo.get("data")).get("Header");
-                for(Object s : array) {
-                    String sentence = (String) s;
-                    if ((sentence = postProcess(preprocess(sentence))) != null) processed.add(sentence);
-                }
-            }
-        }
-
-        JSONArray jsonArray = new JSONArray();
-        for (String text : processed) jsonArray.add(text);
-
-        try {
-            BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(output)));
-            Gson gson = new GsonBuilder().setPrettyPrinting().create();
-            JsonElement ge = JsonParser.parseString(jsonArray.toJSONString());
-            writer.write(gson.toJson(ge));
-            writer.flush();
-            writer.close();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    private boolean checkTwice(String text) {
-        String[] split = text.split(" ");
-        for(int idx = 1 ; idx < split.length ; idx++) {
-            if(split[idx].equalsIgnoreCase(split[idx - 1])) return true;
-        }
-        return false;
-    }
-
-    private String postProcess(String text) {
-        Pattern english = Pattern.compile("[a-zA-Z]+");
-        Pattern years = Pattern.compile("20[0-9]{2}");
-        Pattern numStart = Pattern.compile("^[0-9]");
-        Pattern gameInfo = Pattern.compile("( - )|(시즌 [0-9]+)|( [0-9]+ )|([0-9]\\.[0-9]*)|" +
-                "(공격력|방어력|게임 모드|미니언|플레이|패치|유닛|주문 피해|물리 피해|기본 생명력|군중 제어|경험치|획득량|재사용 대기|체력|" +
-                "매개변수|템플릿|시야 반경|면역|활성화|증가|감소|적 챔피언|아군 챔피언|컨셉 아트|일러스트|게임|모델|자세히 보기|지역 보기|관련 챔피언|스킨|크로마|스킬|리그 오브 레전드|기본 공격|주문 보호막|" +
-                "궁극기|패시브|계산됩니다|중단되|아케인|애니메이션|이벤트)");
-
-        if(checkTwice(text)) {
-            return null;
-        }
-
-        // 연도 정보가 포함되어 있으면 이벤트 정보일 확률이 높음.
-        if(years.matcher(text).find()) return null;
-
-        // 숫자로 시작하는 경우 이상한 정보일 경우가 많음.
-        if(numStart.matcher(text).find()) return null;
-        
-        // 콜론이 들어가 있으면 스킬 설명, 잡다한 정보일 확률이 대략 80%정도 됨. (20%의 오차를 없애는 현명한 방법을 찾지 못함)
-        int colonIdx = text.indexOf(":");
-        if (colonIdx >= 0) return null;
-
-        // 주로 잘못입력된 정보를 교체함
-        text = text.replace("T.F.", "트위스티드 페이트")
-                .replace("티에프", "트위스티드 페이트")
-                .replace("T.F", "트위스티드 페이트")
-                .replace("CM", "cm")
-                .replace("필토버", "필트오버")
-                .replace("필오버", "필트오버")
-                .replace("우르고트", "우르곳")
-                .replace(" 다린", " 다르킨")
-                .replace("다킨", "다르킨")
-                .replace("헥스텍", "헥스테크")
-                .replace("데마키안", "데마시안")
-                .replace("자운인", "자우니트")
-                .replace("자우나이트", "자우니트")
-                .replace("프렐요르드", "프렐요드")
-                .replace("프렐요르디안", "프렐요드인")
-                .replace("타르곤", "타곤")
-                .replace("타르고니아인", "타곤인")
-                .replace("샤이바나", "쉬바나")
-                .replace("질리안", "질리언")
-                .replace("루루", "룰루")
-                .replace("키야나", "키아나")
-                .replace("에블린", "이블린")
-                .replace("시온", "사이온")
-                .replace("아니비아", "애니비아")
-                .replace("강플랭크", "갱플랭크")
-                .replace("엘리즈", "엘리스")
-                .replace("아이버", "아이번")
-                .replace("모르데카이저", "모데카이저")
-                .replace("베이가르", "베이가")
-                .replace("워릭", "워윅")
-                .replace("발리베어", "볼리베어")
-                .replace("말자하르", "말자하")
-                .replace("스카르너", "스카너")
-                .replace("신자오", "신짜오")
-                .replace("신 자오", "신짜오")
-                .replace("나수스", "나서스")
-                .replace("익스탈", "이쉬탈")
-                .replace("람무스", "람머스")
-                .replace("신조", "신짜오")
-                .replace("조냐의", "존야의")
-                .replace("스와인", "스웨인")
-                .replace("그레이브스", "그레이브즈")
-                .replace("카시오페이아", "카시오페아")
-                .replace("켄넨", "케넨")
-                .replace("리 신", "리신")
-                .replace("룩스", "럭스")
-                .replace("모가나", "모르가나")
-                .replace("포피", "뽀삐")
-                .replace("파피", "뽀삐")
-                .replace("양귀비", "뽀삐")
-                .replace("지그스", "직스")
-                .replace("실라스", "사일러스")
-                .replace("악샨", "아크샨")
-                .replace("싱드", "신지드")
-                .replace("트위스티드 운명", "트위스티드 페이트")
-                .replace("&", "와 ")
-                .replaceAll("잭(?!스)", "자크")
-                .replaceAll("그레이브(?!즈)", "그레이브즈")
-                .replaceAll("(?<!아)이오니아", "아이오니아")
-                .replaceAll("(?<!아)이오니안", "아이오니안")
-                .replaceAll("(?<!인)빅터(?!터스)", "빅토르")
-                .replaceAll("['\",`=><]", "")
-                .replaceAll("\\.{2,}", ".")
-                .replaceAll(" {2,}", " ")
-                .replaceAll("-{2,}", "-")
-                .replaceAll("(?=(\\(|\\[|\\{)).*?(?<=(\\)|\\]|\\}))", "")
-                .replaceAll("[\\(\\[\\{\\}\\]\\)]", "")
-                ;
-
-        // 이후 영어가 남아있는 경우 보통 의미 없는 문장인 경우가 많음.
-        if(english.matcher(text).find()) {
-            return null;
-        }
-
-        // 길이가 너무 짧은 문장 혹은 띄어쓰기가 적은 문장은 무의미할 가능성이 높음.
-        if(text.length() < 6 || text.split(" ").length <= 3) return null;
-
-        // -로 시작하는 문장은 앞의 -를 제거
-        if(text.startsWith("-")) text = text.replace("-", "");
-
-        // ~가 들어가면서 그 뒤가 10글자 이내인 경우, 챔피언의 대사로 처리한다.
-        if(text.contains("~")) {
-            String[] split = text.split("~");
-            if(split.length >= 2 && split[1].length() < 10) {
-                text = split[0];
-            }
-        }
-
-        // 패치가 들어있으면 게임 패치와 관련된 내용일 가능성이 높음 ( 45개중 대략 10개정도는 일반 텍스트 )
-        // 게임 내 정보일 확률이 높은 키워드는 위의 gameInfo Pattern에 추가
-        Matcher matcher = gameInfo.matcher(text);
-        if(matcher.find()) return null;
-
-        // 불필요한 공백 제거
-        return text.trim();
-    }
+//    }
+//
+//
+//    private JSONArray array;
+//    private File output;
+//    private JSONObject properMap;
+//
+//    private String preprocess(String line) {
+//        return line.replace("“", "\"")
+//                .replace("”", "\"")
+//                .replace("’", "'")
+//                .replace("‘", "'")
+//                .replace("…", "...")
+//                .replace("—", " ")
+//                .replace("–", "")
+//                .replace("ø", "o")
+//                .replace("♥", "love")
+//                .replace("á", "a")
+//                .replace("ä", "a")
+//                .replace("é", "e")
+//                .replace("í", "i")
+//                .replace("ö", "o")
+//                .replace("ü", "u")
+//                .replace("°", " degrees")
+//                .replace("·", ",")
+//                .replace("「", "\"")
+//                .replace("」", "\"")
+//                .replace("(bug)", "")
+//                .replace("(TBA)", "")
+//                .replaceAll("\\[.*?\\]", "")
+//                .replaceAll("\\(.*?\\)", "")
+//                .replaceAll("^([0-9]+\\n )", "")
+//                .replaceAll(" {2,}", " ")
+//                ;
+//    }
+//
+//    private ResultProcessor(String path) throws IOException, ParseException {
+//
+//        File properFile = new File("./data/propermap.json");
+//        BufferedReader propReader = new BufferedReader(new InputStreamReader(new FileInputStream(properFile)));
+//        String line;
+//        StringBuilder builder = new StringBuilder();
+//        while ((line = propReader.readLine()) != null) builder.append(line);
+//        properMap = (JSONObject) new JSONParser().parse(builder.toString());
+//
+//        File file = new File(path);
+//        BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(file)));
+//        builder.setLength(0);
+//
+//        while ((line = reader.readLine()) != null) builder.append(line);
+//        array = (JSONArray) new JSONParser().parse(builder.toString());
+//
+//        output = new File(path.replace(".json", "-process.json"));
+//        if (!output.exists()) output.createNewFile();
+//    }
+//
+//    private HashMap<String, List<String>> sentences = new HashMap<>();
+//    private final String seperator = "->";
+//
+//    private void processData(Object data, String parent, String newPath, boolean parentIsArray) {
+//        String path = String.format("%s%s%s", parent, seperator, newPath);
+//        if(data instanceof String) {
+//            String key = parentIsArray ? parent : path;
+//            if(!sentences.containsKey(key))
+//                sentences.put(key, new ArrayList<>());
+//            String before = data.toString();
+//            String after = preprocess(before).trim();
+//            sentences.get(key).add(after);
+//        } else if (data instanceof JSONObject) {
+//            processObject((JSONObject) data, path);
+//        } else if (data instanceof JSONArray) {
+//            processArray((JSONArray) data, path);
+//        } else {
+//            System.out.printf("UNKNOWN DATA TYPE : %s\n", data.toString());
+//        }
+//    }
+//
+//    private void processArray(JSONArray data, String path) {
+//        for(int i = 0 ; i < data.size() ; i++) {
+//            processData(data.get(i), path, String.valueOf(i), true);
+//        }
+//    }
+//
+//    private void processObject(JSONObject data, String path) {
+//        for(Object k : data.keySet()) {
+//            String key = k.toString();
+//            processData(data.get(key), path, key, false);
+//        }
+//    }
+//
+//    private void update(String path, List<String> list) {
+//        Object newData;
+//        if(list.size() == 1)
+//            newData = list.get(0);
+//        else {
+//            newData = new JSONArray();
+//            for (String str : list) ((JSONArray)newData).add(str);
+//        }
+//
+//        String[] paths = path.split(seperator);
+//        Object o = array.get(Integer.parseInt(paths[0]));
+//        for(int depth = 1 ; depth < paths.length-1 ; depth++) {
+//            if(o instanceof JSONArray) {
+//                o = ((JSONArray)o).get(Integer.parseInt(paths[depth]));
+//            } else if(o instanceof JSONObject){
+//                o = ((JSONObject) o).get(paths[depth]);
+//            } else {
+//                assert true;
+//            }
+//        }
+//
+//        if(o instanceof JSONArray)
+//            ((JSONArray) o).set(Integer.parseInt(paths[paths.length-1]), newData);
+//        else if(o instanceof JSONObject)
+//            ((JSONObject) o).put(paths[paths.length-1], newData);
+//    }
+//
+//    private void process() {
+//
+//        for(int idx = 0 ; idx < array.size() ; idx++) {
+//            processData(((JSONObject) array.get(idx)).get("data"), String.valueOf(idx), "data", true);
+//        }
+//
+//        for(String key : sentences.keySet()) {
+//            if(sentences.get(key).size() == 0) continue;
+//            update(key, sentences.get(key));
+//        }
+//
+//        try {
+//            BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(output)));
+//            Gson gson = new GsonBuilder().setPrettyPrinting().create();
+//            JsonElement ge = JsonParser.parseString(array.toJSONString());
+//            writer.write(gson.toJson(ge));
+//            writer.flush();
+//            writer.close();
+//        } catch (IOException e) {
+//            throw new RuntimeException(e);
+//        }
+//    }
+//
 }
