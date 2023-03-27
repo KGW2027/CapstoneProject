@@ -12,7 +12,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
 
-public class CrawlingDatas extends HashMap<String, CrawlingData> {
+public class CrawlingDatas extends HashMap<String, Object> {
 
     private String title, fileName;
     private final String FILE_PARENT = "./data/{title}/{text}.json";
@@ -25,9 +25,16 @@ public class CrawlingDatas extends HashMap<String, CrawlingData> {
     private String makeJson() {
         JSONArray array = new JSONArray();
         for(String key : keySet()) {
+            Object value = get(key);
             JSONObject jo = new JSONObject();
             jo.put("title", key);
-            jo.put("data", new JSONObject(get(key).getContexts()));
+
+            if(value instanceof CrawlingData)
+                jo.put("data", new JSONObject(((CrawlingData) value).getContexts()));
+            else if(value instanceof JSONObject)
+                jo.put("data", value);
+
+            if(((JSONObject)jo.get("data")).size() == 0) continue;
             array.add(jo);
         }
         Gson gson = new GsonBuilder().setPrettyPrinting().create();
@@ -36,6 +43,8 @@ public class CrawlingDatas extends HashMap<String, CrawlingData> {
     }
 
     public void save() throws IOException {
+        if(keySet().size() == 0) return;
+
         if(fileName.equals("")) fileName = "save_ckpt";
         String dir = FILE_PARENT.replace("{title}", title).replace("{text}", fileName);
         File file = new File(dir);
