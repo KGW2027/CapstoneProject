@@ -14,7 +14,6 @@ public class UniverseKoSearcher extends CrawlingSearcher {
 
     @Override
     public void search(String docName, CrawlingQueue queue, WebElement element) {
-        super.search(docName, queue, element);
 
         WebElement appDiv = element.findElement(By.id("App"));
         WebElement contentDiv = appDiv.findElement(By.xpath(".//div[@id='Content']"));
@@ -27,7 +26,7 @@ public class UniverseKoSearcher extends CrawlingSearcher {
         for(Element linker : linkers) {
             String href = linker.attr("href").toLowerCase();
             if(isExternalUrl(href)) continue;
-            queue.addQueue(href);
+            queue.addQueue(body.URL_PREFIX, href);
         }
 
         // 문서 정보 획득

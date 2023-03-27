@@ -9,7 +9,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
-public class CrawlingSearcher {
+public abstract class CrawlingSearcher {
 
     private List<String> prefixes;
     protected CrawlerBody body;
@@ -19,9 +19,7 @@ public class CrawlingSearcher {
         return this;
     }
 
-    public void search(String docName, CrawlingQueue queue, WebElement element) {
-
-    }
+    public abstract void search(String docName, CrawlingQueue queue, WebElement element);
 
     public void addExpectPrefix(String url) {
         if(prefixes == null) prefixes = new ArrayList<>();

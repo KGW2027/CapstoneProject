@@ -1,6 +1,7 @@
 package org.example.translator.processors;
 
 import org.example.translator.CrawlDataProcessor;
+import org.example.translator.TranslatorMachine;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.ParseException;
@@ -9,6 +10,10 @@ import java.io.IOException;
 import java.util.HashSet;
 
 public class UniverseParser extends CrawlDataProcessor {
+    public UniverseParser(TranslatorMachine translator) {
+        super(translator);
+    }
+
     @Override
     public void process(HashSet<String> texts) throws IOException, ParseException {
         JSONArray array = readSource();
@@ -38,6 +43,6 @@ public class UniverseParser extends CrawlDataProcessor {
 
     @Override
     public String getSrcPath() {
-        return "./data/univ_en/univ_en_us-0519.json";
+        return "./data/univ_en/Univ-En.json";
     }
 }
