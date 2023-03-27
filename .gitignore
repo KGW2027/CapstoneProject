@@ -16,5 +16,6 @@ data_crawler/output/*
 data_crawler/*.txt
 data_crawler/data/*
 
+
 #caches
 ptunning/*
