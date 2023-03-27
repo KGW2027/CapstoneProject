@@ -16,8 +16,6 @@ dependencies {
     implementation 'com.google.code.gson:gson:2.8.7'
 
     implementation 'org.seleniumhq.selenium:selenium-java:4.8.0'
-    implementation 'org.jsoup:jsoup:1.15.4'
-    implementation 'org.openkoreantext:open-korean-text:2.3.1'
 }
 
 test {
