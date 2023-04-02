@@ -3,6 +3,10 @@
 # 그 외에 tqdm(progress_bar), Korpora(Korean dataset) 설치
 import os
 
+import models.dataset.AiHubDataset
+from models.dataset import AiHubProcessor
+from models.model import AGClassification
+
 os.environ['TRANSFORMERS_CACHE'] = './transformers/cache/'
 
 import torch
@@ -50,5 +54,25 @@ def run_lol01():
 
 
 
-run_lol01()
+# print(models.dataset.AiHubDataset.preprocess_message('ㅋㅋㄱㅋㅋㅋㄱㅋ 머해'))
+# models.dataset.AiHubProcessor.AiHubKoreanSNS().merge_data()
+# run_lol01()
 # run_nli()
+
+# Epoch 0 : [Eval :  0.80%, Test : None   ]
+# Epoch 1 : [Eval : 59.34%, Test : 58.81% ]
+# Epoch 2 : [Eval : 00.00%, Test : 00.00% ]
+
+agc = AGClassification.AGClassifier('skt/kogpt2-base-v2')
+agc.load_ckpt('ckpt/ag-classifier/')
+
+# Token Length를 확인하는 도표
+# agc.view_length_distributes(AiHubProcessor.load_aihub_sns())
+
+# 테스트 및 훈련
+# agc.generate_dataset(AiHubProcessor.load_aihub_sns())
+# agc.start_test(batch_size=32)
+# agc.start_train(num_epoch=1, batch_size=32)
+
+# 생성 테스트
+print(agc.generate_answer(1, 2, '밝은 인사말을 작성해봐.'))
