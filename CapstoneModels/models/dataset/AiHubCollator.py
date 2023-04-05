@@ -13,6 +13,10 @@ class SNSMaskCollator(DataCollatorForLanguageModeling):
         super().__init__(tokenizer=tokenizer, mlm_probability=mlm_probability)
         self.tokenizer = tokenizer
         self.ag_token = '<ag>'
+        self.eos_token = self.tokenizer('</s>')['input_ids'][0]
+        special_tokens = self.tokenizer.all_special_tokens
+        special_tokens.append(self.ag_token)
+        self.special_tokens = [self.tokenizer(token)['input_ids'][0] for token in special_tokens]
 
     def torch_mask_tokens(self, inputs: Any, special_tokens_mask: Optional[Any] = None) -> Tuple[Any, Any]:
         """
@@ -24,12 +28,16 @@ class SNSMaskCollator(DataCollatorForLanguageModeling):
         # We sample a few tokens in each sequence for MLM training (with probability `self.mlm_probability`)
         probability_matrix = torch.full(labels.shape, self.mlm_probability)
         if special_tokens_mask is None:
-            special_tokens = self.tokenizer.all_special_tokens
-            special_tokens.append(self.ag_token)
-            special_tokens = [self.tokenizer(token)['input_ids'][0] for token in special_tokens]
-            special_tokens_mask = [
-                [token in special_tokens for token in val] for val in labels.tolist()
-            ]
+
+            special_tokens_mask = []
+            for val in labels.tolist():
+                mask = []
+                question_prefix = True
+                for token in val:
+                    mask.append(question_prefix or token in self.special_tokens)
+                    if token == self.eos_token:
+                        question_prefix = False
+                special_tokens_mask.append(mask)
             special_tokens_mask = torch.tensor(special_tokens_mask, dtype=torch.bool)
         else:
             special_tokens_mask = special_tokens_mask.bool()

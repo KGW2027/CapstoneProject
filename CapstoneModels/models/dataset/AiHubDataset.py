@@ -20,9 +20,13 @@ def generate_SNS_dataset(tokenizer, use_ratio: float = 0.3, lm_mode:bool = True)
     print(f'data set ratio : {use_ratio}')
 
     for key, sep in datas.items():
-        length = math.ceil(len(sep) * use_ratio)
-        train_cut = math.ceil(length * 0.8)
-        dev_cut = math.ceil(length * 0.9)
+        # length = math.ceil(len(sep) * use_ratio)
+        # train_cut = math.ceil(length * 0.8)
+        # dev_cut = math.ceil(length * 0.9)
+        length = 290000
+        train_cut = 240000
+        dev_cut = 270000
+
         train = train + sep[0:train_cut]
         dev = dev + sep[train_cut + 1:dev_cut]
         test = test + sep[dev_cut + 1:length]
@@ -86,21 +90,18 @@ class AiHubKoreanSNSDataset(Dataset):
             self.corpus = []
             print(f"Make Dataset - SNS-{self.sid}")
             lengths = defaultdict(int)
-            for contexts in tqdm(corpus):
-                for dialogue in contexts:
-                    tokens = self.tokenizer.encode(dialogue)
-                    token_len = len(tokens)
-                    lengths[math.ceil(token_len/64)] += 1
-                    if token_len > self.max_length:
-                        continue
+            for dialogue in tqdm(corpus):
+                tokens = self.tokenizer.encode(dialogue)
+                token_len = len(tokens)
+                lengths[math.ceil(token_len/64)] += 1
+                if token_len > self.max_length:
+                    continue
 
-                    attention_mask = [1] * token_len + [0] * (self.max_length - token_len)
-                    tokens += [0] * (self.max_length - token_len)
-                    self.corpus.append([tokens, attention_mask])
+                attention_mask = [1] * token_len + [0] * (self.max_length - token_len)
+                tokens += [0] * (self.max_length - token_len)
+                self.corpus.append([tokens, attention_mask])
             print(f'\n\n{self.sid}')
-            for idx in range(len(lengths)):
-                print(f'{idx} : {lengths[idx]}')
-            GraphGenerator.generate_tokens_length(lengths, name=self.sid)
+            print(lengths)
             DatasetManager.save_dataset_ckpt(self.sid, self.corpus)
         print(f'{self.sid} data-set count : {len(self.corpus)}')
 

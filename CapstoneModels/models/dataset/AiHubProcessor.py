@@ -115,7 +115,7 @@ class AiHubKoreanSNS:
         limit = 500000
 
         for raw_data in os.listdir(path_dir):
-            if raw_data == 'result.json':
+            if raw_data.startswith('result'):
                 continue
 
             with open(path_dir + raw_data, "r", encoding='utf-8') as read_json:
@@ -146,8 +146,6 @@ class AiHubKoreanSNS:
                     now_msg = ''
                     last_msg_time = -9999
 
-                    dialogues = []
-
                     for dialogue in item['body']:
                         # 발화자와 텍스트 파싱
                         talker = int(dialogue['participantID'][1:]) - 1
@@ -177,7 +175,7 @@ class AiHubKoreanSNS:
                                     continue
                                 if len(datas[ag_value]) > limit:
                                     continue
-                                concat = end_token + prev_msg + ' ' + ag_token + ag_value + sep_token + now_msg + end_token
+                                concat = prev_msg + ' ' + ag_token + ag_value + end_token + now_msg
                                 datas[ag_value].append(concat)
                                 prev_msg = now_msg if cont_talker != talker else ''
                                 now_msg = ''
@@ -190,13 +188,14 @@ class AiHubKoreanSNS:
                         last_msg_time = msg_time
 
                     if now_msg != '' and prev_msg != '':
-                        concat = end_token + prev_msg + ' ' + ag_token + str(participants[talker]) + sep_token + now_msg + end_token
+                        concat = prev_msg + ' ' + ag_token + ag_value + end_token + now_msg
                         if ag_value not in datas.keys():
                             continue
                         if len(datas[ag_value]) > limit:
                             continue
                         datas[ag_value].append(concat)
 
-        print(f'now Length : {len(datas)}')
+        for key, value in datas.items():
+            print(f'{key} : {len(value)}')
         with open('datasets/aihub/result.json', 'w', encoding='utf-8') as json_output:
             json.dump(datas, json_output, ensure_ascii=False)

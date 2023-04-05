@@ -14,7 +14,6 @@ class AGLMHeadModel:
         self.model = GPT2LMHeadModel.from_pretrained(model_name, use_cache=False)
         if model_name == 'skt/kogpt2-base-v2':
             self.tokenizer.add_special_tokens({'bos_token': '</s>', 'eos_token': '</s>', 'unk_token': '<unk>', 'pad_token': '<pad>', 'mask_token':'<mask>', 'sep_token': '<s>'})
-        print(f'new tokenizer length : {len(self.tokenizer)}')
         self.model.resize_token_embeddings(len(self.tokenizer))
 
         self.train = None
@@ -66,7 +65,7 @@ class AGLMHeadModel:
 
     def generate_sentence(self, gender: str, age: int, prompt):
         ag = (0 if gender.lower() == 'male' else 1) * 10 + math.floor(age / 10)
-        context = f'{prompt} <AG> {ag} <s>'
+        context = f'{prompt} <AG> {ag} </s>'
         input_ids = self.tokenizer.encode(context, return_tensors='pt')
 
         output = self.model.generate(input_ids=input_ids,
