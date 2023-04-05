@@ -2,10 +2,12 @@
 # Transformer Install : pip install transformers==4.10.0
 # 그 외에 tqdm(progress_bar), Korpora(Korean dataset) 설치
 import os
+import re
 
 import models.dataset.AiHubDataset
 from models.dataset import AiHubProcessor
 from models.model import AGClassification
+from models.model.AGLMHeadModel import AGLMHeadModel
 
 os.environ['TRANSFORMERS_CACHE'] = './transformers/cache/'
 
@@ -53,9 +55,21 @@ def run_lol01():
         print(f"결과 {idx+1} ::\n{text}\n")
 
 
+# AiHubProcessor.load_aihub_sns()
+# models.dataset.AiHubProcessor.AiHubKoreanSNS().merge_data()
+
+aglm = AGLMHeadModel(model_name='skt/kogpt2-base-v2')
+# print(aglm.generate_sentence('female', 20, '안녕 이름이 뭐야?'))
+aglm.generate_dataset()
+# aglm.load_ckpt('ckpt/aglm2/')
+# aglm.start_train(num_epochs=1, batch_size=32, gradient_checkpointing=True, gradient_accumulation_steps=4)
+# prompt = '이름 뭐임?'
+# print(aglm.generate_sentence('female', 20, prompt))
+# print(aglm.generate_sentence('male', 20, prompt))
+# print(aglm.generate_sentence('male', 30, prompt))
+
 
 # print(models.dataset.AiHubDataset.preprocess_message('ㅋㅋㄱㅋㅋㅋㄱㅋ 머해'))
-# models.dataset.AiHubProcessor.AiHubKoreanSNS().merge_data()
 # run_lol01()
 # run_nli()
 
@@ -63,8 +77,8 @@ def run_lol01():
 # Epoch 1 : [Eval : 59.34%, Test : 58.81% ]
 # Epoch 2 : [Eval : 00.00%, Test : 00.00% ]
 
-agc = AGClassification.AGClassifier('skt/kogpt2-base-v2')
-agc.load_ckpt('ckpt/ag-classifier/')
+# agc = AGClassification.AGClassifier('skt/kogpt2-base-v2')
+# agc.load_ckpt('ckpt/ag-classifier/')
 
 # Token Length를 확인하는 도표
 # agc.view_length_distributes(AiHubProcessor.load_aihub_sns())
@@ -75,4 +89,4 @@ agc.load_ckpt('ckpt/ag-classifier/')
 # agc.start_train(num_epoch=1, batch_size=32)
 
 # 생성 테스트
-print(agc.generate_answer(1, 2, '밝은 인사말을 작성해봐.'))
+# print(agc.generate_answer(1, 2, '밝은 인사말을 작성해봐.'))

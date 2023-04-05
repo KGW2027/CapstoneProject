@@ -28,22 +28,11 @@ class AGClassifier:
         self.model = GPT2ForSequenceClassification.from_pretrained(path, num_labels=20)
 
 
-    def generate_dataset(self, datas):
-        train = []
-        dev = []
-        test = []
-        for key, value in datas.items():
-            length = math.ceil(len(value) * 0.3)
-            train_cut = math.ceil(length * 0.8)
-            dev_cut = math.ceil(length * 0.9)
-
-            train = train + value[0:train_cut]
-            dev = dev + value[train_cut+1:dev_cut]
-            test = test + value[dev_cut+1:length]
-
-        self.train = AiHubDataset.AiHubKoreanSNSDataset(train, self.tokenizer, 'train')
-        self.dev = AiHubDataset.AiHubKoreanSNSDataset(dev, self.tokenizer, 'dev')
-        self.test = AiHubDataset.AiHubKoreanSNSDataset(test, self.tokenizer, 'test')
+    def generate_dataset(self):
+        load = AiHubDataset.generate_SNS_dataset(self.tokenizer, use_ratio=0.3)
+        self.train = load['train']
+        self.dev = load['dev']
+        self.test = load['test']
 
     def view_length_distributes(self, datas):
         AiHubProcessor.view_tokens_length_statistics_sns(datas, self.tokenizer)
@@ -123,16 +112,16 @@ class AGClassifier:
 
         print(f"TEST RESULT :: {accuracy:06.2%}")
 
-    def generate_answer(self, gender:int, age:int, prompt):
-        """
-        AGClassification Model을 이용한 답변 생성 태스크
-        :param gender: 0-남성, 1-여성
-        :param age: 2-20대, 3-30대, 4-40대 // 20대에 특화되었으며 30,40도 일부 지원
-        :param prompt: 프롬프트
-        :return:
-        """
-        encoded_prompt = self.tokenizer.encode(prompt, add_special_tokens=False, return_tensors='pt')
-        generated = self.model.generate(input_ids=encoded_prompt, labels=torch.tensor([gender*10+age]).unsqueeze(0), max_length=128, do_sample=True, top_p=0.95, top_k=50)
-        output_sentence = self.tokenizer.decode(generated[0], skip_special_tokens=True)
-
-        return output_sentence
+    # def generate_answer(self, gender:int, age:int, prompt):
+    #     """
+    #     AGClassification Model을 이용한 답변 생성 태스크
+    #     :param gender: 0-남성, 1-여성
+    #     :param age: 2-20대, 3-30대, 4-40대 // 20대에 특화되었으며 30,40도 일부 지원
+    #     :param prompt: 프롬프트
+    #     :return:
+    #     """
+    #     encoded_prompt = self.tokenizer.encode(prompt, add_special_tokens=False, return_tensors='pt')
+    #     generated = self.model.generate(input_ids=encoded_prompt, labels=torch.tensor([gender*10+age]).unsqueeze(0), max_length=128, do_sample=True, top_p=0.95, top_k=50)
+    #     output_sentence = self.tokenizer.decode(generated[0], skip_special_tokens=True)
+    #
+    #     return output_sentence

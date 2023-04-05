@@ -9,32 +9,34 @@ from tqdm import tqdm
 import GraphGenerator
 
 emotes = {
-    "<LAUGH>": r'[ㅋㅎ]+|(ㅋㅅㅋ)|ㅋ+ㄱ+|ㄱ+ㅋ+|ㅋ+',
-    "<INTERJECTION>": r'(ㅗㅜㅑ)|(ㅁㅊㄷ)+|(ㅁㅊ)+',
-    "<ABUSE_W>": r'(ㅈㄹ)|(ㄷㅊ)|(ㄲㅈ)|(ㅆㄺ)|(ㅆㄹㄱ)|(ㅉ)+',
-    "<ABUSE_S>": r'(ㅅㅂ)+|(ㅆㅂ)|(ㅄ)+|(ㅗ)+',
-    "<WAIT>": r'(ㄱㄷ)+',
-    "<THANKS>": r'(ㄱㅅ)+|(ㄳ)+',
-    "<NO>": r'(ㄴ)+|(ㅅㄹㄷ)+|(ㅅㄹ)+',
-    "<OK>": r'(ㅇㅋ)|[ㅇ]+|[ㅔㅖㅓ]+|(ㅁㅈ)+',
-    "<EXPECT>": r'(ㄷㄱ)+',
-    "<SORRY>": r'(ㅈㅅ)+',
-    "<HURRY>": r'(ㅃㄹ)',
+    "<laugh>": r'(?!ㄱ)[ㅋㄱ]+|[ㅋㅎ]+|(ㅋㅅㅋ)',
+    "<surprise>": r'(ㅗㅜㅑ)|(ㅁㅊㄷ)+|(ㅁㅊ)+|(ㅁㅊㅇ)+',
+    "<weak_abuse>": r'(ㅈㄹ)+|(ㅈㄹㄴ)+|(ㄷㅊ)+|(ㄲㅈ)+|(ㅆㄺ)+|(ㅆㄹㄱ)+|(ㅉ)+',
+    "<strong_abuse>": r'(ㅅㅂ)+|(ㅆㅂ)+|(ㅄ)+|(ㅗ)+',
+    "<wait>": r'(ㄱㄷ)+',
+    "<ty>": r'(ㄱㅅ)+|(ㄳ)+',
+    "<no>": r'(ㄴ)+|(ㅅㄹㄷ)+|(ㅅㄹ)+',
+    "<ok>": r'(ㅇㅋ)+|ㅇ+|[ㅔㅖㅓ]+|(ㅁㅈ)+',
+    "<expect>": r'(ㄷㄱ)+',
+    "<sry>": r'(ㅈㅅ)+',
+    "<hurry>": r'(ㅃㄹ)+',
 
-    "<SAD>": r'[ㅜ]+|[ㅠ]+|[ㅜ]+[ㅠ]+|[ㅠ]+[ㅜ]+|ㄸ[ㄹ]+',
-    "<SCARE>": r'(ㄷ)+|(ㄸ)+',
-    "<CELEBRATE>": r'(ㅊ)+',
-    "<RUN>": r'[ㅌ]+',
-    "<WHY>": r'[ㅞㅙ]',
-    "<GO>": r'[ㄱ]+',
-    "<BORED>": r'[ㅡ]+',
-    "<BYE>": r'ㅂ(ㅂ)+|(ㅃ)+',
-    "<HELLO>": r'(ㅑ)',
+    "<sad>": r'[ㅜㅠ]+|(ㅜ+ㅠ+)+|(ㅠ+ㅜ+)+|ㄸ[ㄹ]+',
+    "<scare>": r'(ㄷ)+|(ㄸ)+',
+    "<celebrate>": r'(?!ㅈ)[ㅈㅊ]+',
+    "<run>": r'[ㅌ]+',
+    "<why>": r'[ㅞㅙ]+',
+    "<go>": r'[ㄱ]+',
+    "<bored>": r'[ㅡ]+',
+    "<bye>": r'ㅂ(ㅂ)+|(ㅃ)+',
+    "<hello>": r'(ㅑ)+',
 }
 
+emote_keys = ['<laugh>', '<surprise>', '<weak_abuse>', '<strong_abuse>', '<wait>', '<ty>', '<no>', '<ok>', '<expect>', '<sry>', '<hurry>',
+              '<sad>', '<scare>', '<celebrate>', '<run>', '<why>', '<go>', '<bored>', '<bye>', '<hello>']
+
 def add_tokens(tokenizer):
-    for token in emotes.keys():
-        tokenizer.add_tokens(token)
+    tokenizer.add_tokens(list(emotes.keys()) + ['<name>', '<belong>', '<place>'])
     return tokenizer
 
 def load_aihub_sns():
@@ -59,8 +61,6 @@ def view_tokens_length_statistics_sns(json_obj, tokenizer):
     for idx in range(len(lengths_64)):
         print(f"[{idx*64}, {(idx+1)*64}) :: {lengths_64[idx]}")
 
-##### Parsers
-
 
 class AiHubKoreanSNS:
     # AI HUB Dataset ( 일상 대화 ) Structure
@@ -83,45 +83,36 @@ class AiHubKoreanSNS:
     #   participantID : 말하는 사람
     #   utterance : 채팅
 
-    def parse_category(self, topic: str):
-        categories = {"개인및관계": 0, "미용과건강": 1, "상거래(쇼핑)": 2, "시사교육": 3, "식음료": 4, "여가생활": 5, "일과직업": 6, "주거와생활": 7,
-                      "행사": 8}
-        return categories.get(topic)
-
-    def replace(self, match):
-        return match.group(1)
-
     def preprocess_message(self, message):
         # Specific Token Replacing & Masking
         replaces = {
-            "<NAME>": ["이름", "신원", "계정", "번호", "전번"],
-            "<BELONG>": ["소속", "주소"],
+            "<name>": ["이름", "신원", "계정", "번호", "전번"],
+            "<belong>": ["소속", "주소"],
+            "<place>": ['장소', '위치']
         }
         for k, v in replaces.items():
             for tgt in v:
                 message = message.replace('#@' + tgt + '#', k)
-        message = re.sub(r'#@\w+#', '', message)
-        message = re.sub(r'\s+', ' ', message)
 
-        for token, regex in emotes.items():
-            message = re.sub(regex, token, message)
+        for key in emote_keys:
+            message = re.sub(emotes[key], key, message)
+
+        # remove all not seeds
+        message = re.sub(r'#@[가-힣]+(#[가-힣]+)?#', '', message)
+        message = re.sub(r'[^<>\[\]()가-힣a-z0-9. !?]|#@\w+#', '', message)
 
         # Special Character Short
         message = re.sub(r"!+\?+|\?+!+", '?!', message)
-        message = re.sub(r'([^.\w])\1+', r'\1', message)
-        message = re.sub(r'([가-힣]+#)|@', '', message)
-
-        pattern = re.compile(r"(<[a-zA-Z0-9]+>)+")
-        message = re.sub(pattern, self.replace, message)
-        message = re.sub(r'<(\w+)>ㅅ<\1>', r'<\1>', message)
-        message = re.sub(r'[ㄱ-ㅎ]ㅅ[ㄱ-ㅎ]', '', message)
+        message = re.sub(r'\.{3,}', '...', message)
+        message = re.sub(r'\s+', ' ', message)
 
         return message
 
     def merge_data(self):
         path_dir = 'datasets/aihub/'
 
-        datas = {}
+        datas = {'2': [], '3': [], '12': [], '13': []}
+        limit = 500000
 
         for raw_data in os.listdir(path_dir):
             if raw_data == 'result.json':
@@ -130,10 +121,9 @@ class AiHubKoreanSNS:
             with open(path_dir + raw_data, "r", encoding='utf-8') as read_json:
                 print(f"Start load {raw_data}")
                 json_data = json.load(read_json)['data']
-                multiturn_dataset = []
                 for item in tqdm(json_data):
+
                     # 대화 참가자 추상화 ( 성별 : 남성은 0, 여성은 1, 나이 : 10대 단위로 자름 )
-                    # P1 -> index 0, P2 -> index 1 ...
                     participants = {}
                     for participant in item['header']['participantsInfo']:
                         gender = participant['gender']
@@ -143,43 +133,70 @@ class AiHubKoreanSNS:
 
                         compress = gender * 10 + age
                         participants[pid] = compress
-                        # statistic[compress] += 1
 
                     # 채팅 추상화 ( [담화자, 텍스트] )
+                    # 같은 화자의 텍스트는 <s>를 사이에 두고 concatenation한다.
+                    # 서로 다른 화자의 텍스트 2개를 묶고, 사이에는 </s>를 넣는다.
+                    sep_token = '<s>'
+                    ag_token = '<ag>'
+                    end_token = '</s>'
+
+                    cont_talker = -1
+                    prev_msg = ''
+                    now_msg = ''
+                    last_msg_time = -9999
+
                     dialogues = []
-                    prev_talker = -1
-                    msg_concat = ''
+
                     for dialogue in item['body']:
                         # 발화자와 텍스트 파싱
                         talker = int(dialogue['participantID'][1:]) - 1
-                        utterance = dialogue['utterance']
+                        utterance = dialogue['utterance'].lower()
+                        msg_time = int(dialogue['time'][:2]) * 60 + int(dialogue['time'][3:5])
+                        if last_msg_time == -9999:
+                            last_msg_time = msg_time
 
                         # 광고/카드결제 메시지가 있을 경우 건너뜀.
-                        if 'Web발신' in utterance.lower():
+                        if 'web발신' in utterance:
                             continue
 
                         # 대화 등록
-                        if prev_talker >= 0 and prev_talker != talker:
-                            msg_concat = re.sub(r'(<SEP>)+', '<SEP>', msg_concat)
+                        time_gap = msg_time - last_msg_time
+                        if time_gap < 0:
+                            time_gap += (60*24)
 
-                            if msg_concat.endswith('<SEP>'):
-                                msg_concat = msg_concat.rstrip('<SEP>')
-                            if msg_concat.startswith('<SEP>'):
-                                msg_concat = msg_concat.lstrip('<SEP>')
-
-                            if msg_concat != '' and msg_concat != ' ':
-                                dialogues.append([talker, msg_concat])
-                            msg_concat = ''
+                        if cont_talker != talker or (cont_talker == talker and time_gap >= 30):
+                            if now_msg == '':
+                                prev_msg = ''
+                            elif prev_msg == '':
+                                prev_msg = now_msg
+                                now_msg = ''
+                            else:
+                                ag_value = str(participants[talker])
+                                if ag_value not in datas.keys():
+                                    continue
+                                if len(datas[ag_value]) > limit:
+                                    continue
+                                concat = end_token + prev_msg + ' ' + ag_token + ag_value + sep_token + now_msg + end_token
+                                datas[ag_value].append(concat)
+                                prev_msg = now_msg if cont_talker != talker else ''
+                                now_msg = ''
 
                         # 대화 Append
-                        msg_concat = msg_concat + '<SEP>' + self.preprocess_message(utterance)
-                        prev_talker = talker
+                        new_msg = self.preprocess_message(utterance)
+                        if new_msg != '':
+                            now_msg = (now_msg + ' ' + new_msg) if now_msg != '' else new_msg
+                        cont_talker = talker
+                        last_msg_time = msg_time
 
-                    if msg_concat != '':
-                        dialogues.append([prev_talker, msg_concat])
+                    if now_msg != '' and prev_msg != '':
+                        concat = end_token + prev_msg + ' ' + ag_token + str(participants[talker]) + sep_token + now_msg + end_token
+                        if ag_value not in datas.keys():
+                            continue
+                        if len(datas[ag_value]) > limit:
+                            continue
+                        datas[ag_value].append(concat)
 
-                    multiturn_dataset.append({'participant': participants, 'dialogue': dialogues})
-                datas[raw_data.split(".")[0]] = multiturn_dataset
-
+        print(f'now Length : {len(datas)}')
         with open('datasets/aihub/result.json', 'w', encoding='utf-8') as json_output:
             json.dump(datas, json_output, ensure_ascii=False)
