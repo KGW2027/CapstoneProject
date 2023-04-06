@@ -1,13 +1,12 @@
 import json
 import math
-import os
 import re
 from collections import defaultdict
 
 from tqdm import tqdm
 
 import GraphGenerator
-from models import DatasetManager
+from models.dataset.core import DataProcessor
 
 emotes = {
     "<laugh>": r'(?!ㄱ)[ㅋㄱ]+|[ㅋㅎ]+|(ㅋㅅㅋ)|키키+|크크+|하하+',
@@ -112,73 +111,14 @@ def preprocess_message(message):
 
     return message
 
-
-
-def getPath(name:str):
-    parent = f'G:/Datasets/{name}/'
-    return parent+'train', parent+'valid'
-
-def getFiles(path:str):
-    files = []
-    for fname in os.listdir(path):
-        file = path + '/' + fname
-        if os.path.isfile(file):
-            files.append(file)
-        elif os.path.isdir(file):
-            files += getFiles(file)
-    return files
-
-class DataProcessor:
-    def __init__(self):
-        self.train = []
-        self.dev = []
-
-    def load(self):
-        train, valid = getPath(self.getName())
-        self.internal_load(getFiles(train), self.train)
-        self.internal_load(getFiles(valid), self.dev, train_mode=False)
-
-    def internal_load(self, files: list, array: list, train_mode: bool = True, save_cache: bool = True, load_cache: bool = True):
-        mode = 'train' if train_mode else 'dev'
-
-        if load_cache:
-            load = DatasetManager.load_dataset_ckpt(f'{self.getName()}-{mode}')
-            if load is not None:
-                print('load dataset cache')
-                if train_mode:
-                    self.train += load
-                else:
-                    self.dev += load
-                return None
-
-
-        for file_name in tqdm(files):
-            with open(file_name, 'r', encoding='utf-8') as json_file:
-                data = json.load(json_file)
-                process = self.process(data)
-                if process is None:
-                    continue
-                array.append(process)
-
-        if save_cache:
-            DatasetManager.save_dataset_ckpt(f'{self.getName()}-{mode}', array)
-
-    def getName(self):
-        return None
-
-    def process(self, data):
-        return None
-
-    def get(self):
-        return self.train, self.dev
-
-
-
 class AiHub20(DataProcessor):
     def __init__(self):
         super().__init__()
         self.acts = defaultdict(int)
         self.ags = defaultdict(int)
+
+    def load(self, train_suffix:str = '', dev_suffix:str = '', load_dev:bool = True):
+        super().load(train_suffix='train', dev_suffix='valid', load_dev=True)
 
     def getName(self):
         return 'aihub_20'
