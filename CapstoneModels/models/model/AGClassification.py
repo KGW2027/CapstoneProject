@@ -1,5 +1,4 @@
 # Age Gender Classification With GPT2forSequenceClassification Class For GPT2-Small
-import math
 
 import torch
 from torch import nn
@@ -8,7 +7,7 @@ from tqdm import tqdm
 from transformers import PreTrainedTokenizerFast, GPT2ForSequenceClassification
 
 from models import ModelManager
-from models.dataset import AiHubProcessor, AiHubDataset
+from models.dataset.aihub import AiHubProcessor, AiHubDataset
 
 
 class AGClassifier:

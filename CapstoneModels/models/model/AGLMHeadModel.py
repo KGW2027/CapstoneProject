@@ -5,9 +5,9 @@ from transformers import GPT2LMHeadModel, TrainingArguments, Trainer, IntervalSt
     GPT2TokenizerFast, DataCollatorForLanguageModeling
 
 from models import ModelManager
-from models.dataset import AiHubProcessor
-from models.dataset.AiHubDataset import AiHub20Dataset
-from models.dataset.AiHubProcessor import DataProcessor
+from models.dataset.aihub import AiHubProcessor
+from models.dataset.aihub.AiHubDataset import AiHub20Dataset
+from models.dataset.aihub.AiHubProcessor import DataProcessor
 
 
 class AGLMHeadModel:

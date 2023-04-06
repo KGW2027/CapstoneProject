@@ -4,7 +4,8 @@
 import os
 import random
 
-from models.dataset import AiHubProcessor
+from models.dataset.aihub import AiHubProcessor
+from models.dataset.nikl import NIKLDataset, NIKLProcessor
 from models.model.AGLMHeadModel import AGLMHeadModel
 
 os.environ['TRANSFORMERS_CACHE'] = './transformers/cache/'
@@ -19,13 +20,13 @@ def run_lol01():
         text = gens[idx].replace('. ', '.\n')
         print(f"결과 {idx+1} ::\n{text}\n")
 
-def main():
+def loadAIHUB20():
     model = AGLMHeadModel(model_name='skt/kogpt2-base-v2', data_processor=AiHubProcessor.AiHub20(), load_ckpt=True)
     # model.start_train(num_epochs=10, batch_size=32, gradient_checkpointing=False, gradient_accumulation_steps=1)
 
     gender = 'female'
     age = 20
-    
+
     test_case = [
         ['질문하기', '오늘 저녁 뭐 먹었어?'],
         ['질문하기', '떡볶이 좋아하니?'],
@@ -59,5 +60,10 @@ def main():
 
     # sentences = model.generate_sentence('female', 20, '질문하기', '오늘 저녁 뭐 먹었어?')
     # print(sentences)
+
+def main():
+    processor = NIKLProcessor.NiklDialogueProcessor()
+    processor.load()
+    processor.check()
 
 main()

@@ -33,10 +33,10 @@ def save_dataset_ckpt(name, value):
     path = f'{dir_prefix}{name}{file_suffix}'
     with open(path, 'w+', encoding='utf-8') as ckpt_file:
         print(f'save_dataset-{name}')
-        json.dump(value, ckpt_file, ensure_ascii=False)
+        json.dump(value, ckpt_file, ensure_ascii=False, indent=' ')
 
 def save_dataset_weight(name, value):
     os.makedirs(dir_prefix, exist_ok=True)
     path = f'{dir_prefix}{name}{weight_suffix}{file_suffix}'
     with open(path, 'w+', encoding='utf-8') as weight_file:
-        json.dump(value, weight_file, ensure_ascii=False)
+        json.dump(value, weight_file, ensure_ascii=False, indent=' ')
