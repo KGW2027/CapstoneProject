@@ -1,6 +1,9 @@
 import json
+import math
 import os
+from collections import defaultdict
 
+from torch.utils.data import Dataset
 from tqdm import tqdm
 
 from models import DatasetManager
@@ -71,3 +74,48 @@ class DataProcessor:
 
     def formatting(self, prev_text, ag_value, next_text):
         return f'{prev_text}{self.ag_token}{ag_value}{self.response_token}{next_text}'
+
+    def tokens(self):
+        return []
+
+
+class TrainDataset(Dataset):
+    def __init__(self, corpus, tokenizer, name:str = 'aglm_train', max_length:int = 128, stride: int = 32):
+        self.corpus = DatasetManager.load_dataset_ckpt(name)
+        self.tokenizer = tokenizer
+        self.max_length = max_length
+        self.pad_token = self.tokenizer(self.tokenizer.pad_token)['input_ids'][0]
+
+        if self.corpus is None:
+            self.corpus = []
+            for value in tqdm(corpus):
+                for context in value:
+                    tokens = self.tokenizer(context)
+                    length = len(tokens['input_ids'])
+
+                    adds = []
+                    if length <= self.max_length:
+                        adds.append(self.padding(tokens['input_ids']))
+                    else:
+                        # Sliding Window
+                        end_length = self.max_length
+                        while length > end_length:
+                            adds.append(self.padding(tokens['input_ids'][end_length-self.max_length:end_length]))
+                            end_length += stride
+                        adds.append(self.padding(tokens['input_ids'][end_length-self.max_length:end_length]))
+
+                    self.corpus += adds
+            DatasetManager.save_dataset_ckpt(name, self.corpus, indent='')
+
+    def __getitem__(self, item):
+        return self.corpus[item]
+
+    def __len__(self):
+        return len(self.corpus)
+
+    def padding(self, tokens):
+        length = len(tokens)
+        remain = self.max_length - length
+        input_ids = tokens + ([self.pad_token] * remain)
+        attention_mask = [1] * length + [0] * remain
+        return {'input_ids': input_ids, 'attention_mask': attention_mask}

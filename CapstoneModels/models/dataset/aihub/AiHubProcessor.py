@@ -141,30 +141,33 @@ class AiHub20(DataProcessor):
         if annotations['speaker_type'] != '1:1':
             return None
 
-        lines = annotations['lines']
-        bef_pid = -1
-        bef_act = -1
-        prev_context = ''
-        now_context = ''
-        for line in lines:
+        prev_talker = -1
+        prev_talk = ''
+        curr_talk = ''
+        for line in annotations['lines']:
             context = preprocess_message(line['norm_text']).strip()
             persona = self.get_ag(line['speaker'])
-            act = self.get_act(line['speechAct'])
             pid = line['speaker']['id'][:1]
-            self.acts[act] += 1
 
-            now_context = context if now_context == '' else (now_context + '<s>' + context)
-            if bef_pid != pid:
-                if prev_context != '':
-                    concat = prev_context + ag_token + persona + act_token + bef_act + res_token + now_context
+            curr_talk = context if curr_talk == '' else (curr_talk + '<s>' + context)
+            if prev_talker != pid:
+                if prev_talk != '':
+                    concat = self.formatting(prev_talk, persona, curr_talk)
                     dialogues.append(concat)
                     self.ags[persona] += 1
-                prev_context = now_context
-                bef_act = act
-                now_context = ''
-            bef_pid = pid
+                prev_talk = curr_talk
+                curr_talk = ''
+            prev_talker = pid
+
+        if prev_talk != '' and curr_talk != '':
+            concat = self.formatting(prev_talk, persona, curr_talk)
+            dialogues.append(concat)
+
 
         return dialogues
+
+    def tokens(self):
+        return list(emotes.keys()) + ['<name>', '<belong>', '<place>']
 
     def check(self):
         print(self.ags)

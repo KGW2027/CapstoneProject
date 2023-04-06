@@ -28,12 +28,15 @@ def load_dataset_weight(name):
             return json.load(weight_file)
     return None
 
-def save_dataset_ckpt(name, value):
+def save_dataset_ckpt(name, value, indent:str = ' '):
     os.makedirs(dir_prefix, exist_ok=True)
     path = f'{dir_prefix}{name}{file_suffix}'
     with open(path, 'w+', encoding='utf-8') as ckpt_file:
         print(f'save_dataset-{name}')
-        json.dump(value, ckpt_file, ensure_ascii=False, indent=' ')
+        if indent == '':
+            json.dump(value, ckpt_file)
+        else:
+            json.dump(value, ckpt_file, ensure_ascii=False, indent=indent)
 
 def save_dataset_weight(name, value):
     os.makedirs(dir_prefix, exist_ok=True)

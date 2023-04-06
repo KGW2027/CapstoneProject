@@ -91,8 +91,15 @@ class NiklDialogueProcessor(DataProcessor):
                 curr_talk = context if curr_talk == '' else f'{curr_talk} {context}'
                 prev_talker = talker
 
+            if prev_talk != '' and curr_talk != '':
+                concat = self.formatting(prev_talk, speakers[talker], curr_talk)
+                dialogues.append(concat)
+
         self.dialogues += len(dialogues)
         return dialogues
+
+    def tokens(self):
+        return ['<name>', '<place>', '<brand>', '<etc>', '<laugh>']
 
     def check(self):
         print(f'total : {self.ag_distribute}')

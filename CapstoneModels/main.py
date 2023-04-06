@@ -21,7 +21,7 @@ def run_lol01():
         print(f"결과 {idx+1} ::\n{text}\n")
 
 def loadAIHUB20():
-    model = AGLMHeadModel(model_name='skt/kogpt2-base-v2', data_processor=AiHubProcessor.AiHub20(), load_ckpt=True)
+    model = AGLMHeadModel(model_name='skt/kogpt2-base-v2', data_processor=[AiHubProcessor.AiHub20()], load_ckpt=True)
     # model.start_train(num_epochs=10, batch_size=32, gradient_checkpointing=False, gradient_accumulation_steps=1)
 
     gender = 'female'
@@ -62,8 +62,13 @@ def loadAIHUB20():
     # print(sentences)
 
 def main():
-    processor = NIKLProcessor.NiklDialogueProcessor()
-    processor.load()
-    processor.check()
+    processor = [
+        AiHubProcessor.AiHub20(),
+        NIKLProcessor.NiklDialogueProcessor(),
+    ]
+    model = AGLMHeadModel(model_name='skt/kogpt2-base-v2', data_processor=processor, load_ckpt=True, ckpt_name='aglm2')
+    # model.start_train(num_epochs=1, batch_size=32)
+    sentences = model.generate_sentence('male', 20, '안녕? 오늘 저녁은 뭐 먹었어?')
+    print(sentences)
 
 main()
