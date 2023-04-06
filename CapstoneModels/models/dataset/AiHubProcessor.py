@@ -7,9 +7,11 @@ from collections import defaultdict
 from tqdm import tqdm
 
 import GraphGenerator
+from models import DatasetManager
 
 emotes = {
-    "<laugh>": r'(?!ㄱ)[ㅋㄱ]+|[ㅋㅎ]+|(ㅋㅅㅋ)',
+    "<laugh>": r'(?!ㄱ)[ㅋㄱ]+|[ㅋㅎ]+|(ㅋㅅㅋ)|키키+|크크+|하하+',
+    "<slur>": r'\.\.+',
     "<surprise>": r'(ㅗㅜㅑ)|(ㅁㅊㄷ)+|(ㅁㅊ)+|(ㅁㅊㅇ)+',
     "<weak_abuse>": r'(ㅈㄹ)+|(ㅈㄹㄴ)+|(ㄷㅊ)+|(ㄲㅈ)+|(ㅆㄺ)+|(ㅆㄹㄱ)+|(ㅉ)+',
     "<strong_abuse>": r'(ㅅㅂ)+|(ㅆㅂ)+|(ㅄ)+|(ㅗ)+',
@@ -32,8 +34,31 @@ emotes = {
     "<hello>": r'(ㅑ)+',
 }
 
+aihub20_acts = {
+    '질문하기': 0,
+    '주장하기': 1,
+    '진술하기': 2,
+    '턴토크 사인': 3,
+    '충고제안하기': 4,
+    '약속하기': 5,
+    '명령요구하기': 6,
+    '부탁하기': 7,
+    '반박하기': 8,
+    '긍정감정 표현하기': 9,
+    '감사하기': 10,
+    '부정감정 표현하기': 11,
+    '거절하기': 12,
+    '위협하기': 13,
+    '사과하기': 14,
+    '인사하기': 15,
+}
+
 emote_keys = ['<laugh>', '<surprise>', '<weak_abuse>', '<strong_abuse>', '<wait>', '<ty>', '<no>', '<ok>', '<expect>', '<sry>', '<hurry>',
               '<sad>', '<scare>', '<celebrate>', '<run>', '<why>', '<go>', '<bored>', '<bye>', '<hello>']
+
+ag_token = '<ag>'
+act_token = '<act>'
+res_token = '<response>'
 
 def add_tokens(tokenizer):
     tokenizer.add_tokens(list(emotes.keys()) + ['<name>', '<belong>', '<place>'])
@@ -62,140 +87,147 @@ def view_tokens_length_statistics_sns(json_obj, tokenizer):
         print(f"[{idx*64}, {(idx+1)*64}) :: {lengths_64[idx]}")
 
 
-class AiHubKoreanSNS:
-    # AI HUB Dataset ( 일상 대화 ) Structure
-    # numberOfItems: 총 데이터 개수
-    # data: 데이터 JSONArray
-    #   header:
-    #       dialogueInfo:
-    #           dialogueID: 채팅 ID
-    #           numberOfParticipants: 채팅 참여자 수
-    #           numberOfUtterances: 채팅 개수
-    #           numberOfTurns: 대화를 주고 받은 수(한 사람이 연속 3개 : 채팅 개수 3개, 1턴)
-    #           topic: 주제
-    #       participantsInfo: 참가자 Array
-    #           participantID: ID
-    #           gender: 성별
-    #           age: 나이(10살 단위)
-    #  body: 채팅 Array
-    #   utteranceID : 채팅 Index
-    #   turnID : 담화 Index
-    #   participantID : 말하는 사람
-    #   utterance : 채팅
+def preprocess_message(message):
+    # Specific Token Replacing & Masking
+    replaces = {
+        "<name>": ["이름", "신원", "계정", "번호", "전번"],
+        "<belong>": ["소속", "주소"],
+        "<place>": ['장소', '위치']
+    }
+    for k, v in replaces.items():
+        for tgt in v:
+            message = message.replace('#@' + tgt + '#', k)
 
-    def preprocess_message(self, message):
-        # Specific Token Replacing & Masking
-        replaces = {
-            "<name>": ["이름", "신원", "계정", "번호", "전번"],
-            "<belong>": ["소속", "주소"],
-            "<place>": ['장소', '위치']
-        }
-        for k, v in replaces.items():
-            for tgt in v:
-                message = message.replace('#@' + tgt + '#', k)
+    for key in emote_keys:
+        message = re.sub(emotes[key], key, message)
 
-        for key in emote_keys:
-            message = re.sub(emotes[key], key, message)
+    # remove all not seeds
+    message = re.sub(r'#@[가-힣]+(#[가-힣]+)?#', '', message)
+    message = re.sub(r'[^<>\[\]()가-힣a-z0-9. !?]|#@\w+#', '', message)
 
-        # remove all not seeds
-        message = re.sub(r'#@[가-힣]+(#[가-힣]+)?#', '', message)
-        message = re.sub(r'[^<>\[\]()가-힣a-z0-9. !?]|#@\w+#', '', message)
+    # Special Character Short
+    message = re.sub(r"!+\?+|\?+!+", '?!', message)
+    message = re.sub(r'\.{3,}', '...', message)
+    message = re.sub(r'\s+', ' ', message)
 
-        # Special Character Short
-        message = re.sub(r"!+\?+|\?+!+", '?!', message)
-        message = re.sub(r'\.{3,}', '...', message)
-        message = re.sub(r'\s+', ' ', message)
+    return message
 
-        return message
 
-    def merge_data(self):
-        path_dir = 'datasets/aihub/'
 
-        datas = {'2': [], '3': [], '12': [], '13': []}
-        limit = 500000
+def getPath(name:str):
+    parent = f'G:/Datasets/{name}/'
+    return parent+'train', parent+'valid'
 
-        for raw_data in os.listdir(path_dir):
-            if raw_data.startswith('result'):
-                continue
+def getFiles(path:str):
+    files = []
+    for fname in os.listdir(path):
+        file = path + '/' + fname
+        if os.path.isfile(file):
+            files.append(file)
+        elif os.path.isdir(file):
+            files += getFiles(file)
+    return files
 
-            with open(path_dir + raw_data, "r", encoding='utf-8') as read_json:
-                print(f"Start load {raw_data}")
-                json_data = json.load(read_json)['data']
-                for item in tqdm(json_data):
+class DataProcessor:
+    def __init__(self):
+        self.train = []
+        self.dev = []
 
-                    # 대화 참가자 추상화 ( 성별 : 남성은 0, 여성은 1, 나이 : 10대 단위로 자름 )
-                    participants = {}
-                    for participant in item['header']['participantsInfo']:
-                        gender = participant['gender']
-                        gender = 0 if gender == '남성' else 1
-                        age = int(int(participant['age'][:2]) / 10)
-                        pid = int(participant['participantID'][1:]) - 1
+    def load(self):
+        train, valid = getPath(self.getName())
+        self.internal_load(getFiles(train), self.train)
+        self.internal_load(getFiles(valid), self.dev, train_mode=False)
 
-                        compress = gender * 10 + age
-                        participants[pid] = compress
+    def internal_load(self, files: list, array: list, train_mode: bool = True, save_cache: bool = True, load_cache: bool = True):
+        mode = 'train' if train_mode else 'dev'
 
-                    # 채팅 추상화 ( [담화자, 텍스트] )
-                    # 같은 화자의 텍스트는 <s>를 사이에 두고 concatenation한다.
-                    # 서로 다른 화자의 텍스트 2개를 묶고, 사이에는 </s>를 넣는다.
-                    sep_token = '<s>'
-                    ag_token = '<ag>'
-                    end_token = '</s>'
+        if load_cache:
+            load = DatasetManager.load_dataset_ckpt(f'{self.getName()}-{mode}')
+            if load is not None:
+                print('load dataset cache')
+                if train_mode:
+                    self.train += load
+                else:
+                    self.dev += load
+                return None
 
-                    cont_talker = -1
-                    prev_msg = ''
-                    now_msg = ''
-                    last_msg_time = -9999
 
-                    for dialogue in item['body']:
-                        # 발화자와 텍스트 파싱
-                        talker = int(dialogue['participantID'][1:]) - 1
-                        utterance = dialogue['utterance'].lower()
-                        msg_time = int(dialogue['time'][:2]) * 60 + int(dialogue['time'][3:5])
-                        if last_msg_time == -9999:
-                            last_msg_time = msg_time
+        for file_name in tqdm(files):
+            with open(file_name, 'r', encoding='utf-8') as json_file:
+                data = json.load(json_file)
+                process = self.process(data)
+                if process is None:
+                    continue
+                array.append(process)
 
-                        # 광고/카드결제 메시지가 있을 경우 건너뜀.
-                        if 'web발신' in utterance:
-                            continue
+        if save_cache:
+            DatasetManager.save_dataset_ckpt(f'{self.getName()}-{mode}', array)
 
-                        # 대화 등록
-                        time_gap = msg_time - last_msg_time
-                        if time_gap < 0:
-                            time_gap += (60*24)
+    def getName(self):
+        return None
 
-                        if cont_talker != talker or (cont_talker == talker and time_gap >= 30):
-                            if now_msg == '':
-                                prev_msg = ''
-                            elif prev_msg == '':
-                                prev_msg = now_msg
-                                now_msg = ''
-                            else:
-                                ag_value = str(participants[talker])
-                                if ag_value not in datas.keys():
-                                    continue
-                                if len(datas[ag_value]) > limit:
-                                    continue
-                                concat = prev_msg + ' ' + ag_token + ag_value + end_token + now_msg
-                                datas[ag_value].append(concat)
-                                prev_msg = now_msg if cont_talker != talker else ''
-                                now_msg = ''
+    def process(self, data):
+        return None
 
-                        # 대화 Append
-                        new_msg = self.preprocess_message(utterance)
-                        if new_msg != '':
-                            now_msg = (now_msg + ' ' + new_msg) if now_msg != '' else new_msg
-                        cont_talker = talker
-                        last_msg_time = msg_time
+    def get(self):
+        return self.train, self.dev
 
-                    if now_msg != '' and prev_msg != '':
-                        concat = prev_msg + ' ' + ag_token + ag_value + end_token + now_msg
-                        if ag_value not in datas.keys():
-                            continue
-                        if len(datas[ag_value]) > limit:
-                            continue
-                        datas[ag_value].append(concat)
 
-        for key, value in datas.items():
-            print(f'{key} : {len(value)}')
-        with open('datasets/aihub/result.json', 'w', encoding='utf-8') as json_output:
-            json.dump(datas, json_output, ensure_ascii=False)
+
+class AiHub20(DataProcessor):
+    def __init__(self):
+        super().__init__()
+        self.acts = defaultdict(int)
+        self.ags = defaultdict(int)
+
+    def getName(self):
+        return 'aihub_20'
+
+    def get_ag(self, speaker):
+        return str((0 if speaker['sex'] == '여성' else 1) * 10 + int(speaker['age'][:1]))
+
+    def get_act(self, act):
+        act = re.sub(r'(?=\().*?(?<=\))', '', act).strip().replace('/', '')
+        if act not in aihub20_acts.keys():
+            return '16'
+        return str(aihub20_acts[act])
+
+    def process(self, data):
+        dialogues = []
+
+        info = data['info'][0]
+        annotations = info['annotations']
+
+        if annotations['speaker_type'] != '1:1':
+            return None
+
+        lines = annotations['lines']
+        bef_pid = -1
+        bef_act = -1
+        prev_context = ''
+        now_context = ''
+        for line in lines:
+            context = preprocess_message(line['norm_text']).strip()
+            persona = self.get_ag(line['speaker'])
+            act = self.get_act(line['speechAct'])
+            pid = line['speaker']['id'][:1]
+            self.acts[act] += 1
+
+            now_context = context if now_context == '' else (now_context + '<s>' + context)
+            if bef_pid != pid:
+                if prev_context != '':
+                    concat = prev_context + ag_token + persona + act_token + bef_act + res_token + now_context
+                    dialogues.append(concat)
+                    self.ags[persona] += 1
+                prev_context = now_context
+                bef_act = act
+                now_context = ''
+            bef_pid = pid
+
+        return dialogues
+
+    def check(self):
+        print(self.ags)
+        print(self.acts)
+        print(len(self.train))
+        print(len(self.dev))
