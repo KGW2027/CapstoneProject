@@ -12,6 +12,16 @@ def preprocess_message(message):
     message = re.sub(r'&affiliation\d*&', '', message)
     message = message.replace('{laughing}', '<laugh>').replace('{clearing}', '').replace('{singing}', '').replace('{applauding}', '')
 
+    # x prefix
+    message = re.sub(r'x[^ >]*랑', '<name>랑', message)
+    message = re.sub(r'x[^ >]*가', '<name>가', message)
+    message = re.sub(r'x[^ >]*역', '<place>역', message)
+    message = re.sub(r'x[^ >]*에서는', '<place>에서는', message)
+    message = re.sub(r'x[^ >]*에', '<place>에', message)
+    message = re.sub(r'x[^ >]*로', '<place>로', message)
+    message = re.sub(r'x[^ >]*이나', '<place>이나', message)
+    message = re.sub(r'[^ >]*x[^ <]* ', '', message)
+
     # remove all not seeds
     message = re.sub(r'#@[가-힣]+(#[가-힣]+)?#', '', message)
     message = re.sub(r'[^<>가-힣a-z0-9. !?]|#@\w+#', '', message)
