@@ -27,13 +27,11 @@ public class UniverseKoSearcher extends CrawlingSearcher {
     }
 
     private synchronized void addButtons(CrawlingQueue queue, WebElement element) {
-        int added = 0;
         for(WebElement button : element.findElements(By.tagName("a"))) {
             try {
                 String href = button.getAttribute("href").toLowerCase();
                 if (!href.startsWith(body.URL_PREFIX) || href.contains("#")) continue;
                 queue.addQueue(body.URL_PREFIX, href);
-                ++added;
             } catch(Exception ignored) { /* 접근 불가능한 Element에 접근한 경우 */ }
         }
     }
@@ -91,7 +89,7 @@ public class UniverseKoSearcher extends CrawlingSearcher {
 
         for(String line : context.split("\n")) {
             if (line.trim().equals("")) continue;
-            array.add(line);
+            array.add(line.trim());
         }
         jo.put("context", array);
 
@@ -116,14 +114,14 @@ public class UniverseKoSearcher extends CrawlingSearcher {
             cq = cleanHtml(championQuoteElement.getAttribute("innerHTML")).split("~ ");
         } while(cq[0].replace("\n", "").trim().equals(""));
         JSONObject championQuote = new JSONObject();
-        championQuote.put("quote", cq[0].replace("\n", ""));
-        championQuote.put("by", cq[1].replace("\n", ""));
+        championQuote.put("quote", cq[0].replace("\n", "").trim());
+        championQuote.put("by", cq[1].replace("\n", "").trim());
         jo.put("quotes", championQuote);
 
         WebElement championDescription = element.findElement(By.className("biographyText_3-to"));
         WebElement championRegion = element.findElement(By.className("factionText_EnRL"));
-        jo.put("description", championDescription.getText());
-        jo.put("region", championRegion.getText().replace("지역", ""));
+        jo.put("description", championDescription.getText().trim());
+        jo.put("region", championRegion.getText().replace("지역", "").trim());
 
         return jo;
     }
@@ -135,7 +133,12 @@ public class UniverseKoSearcher extends CrawlingSearcher {
 
         WebElement regionDescription = element.findElement(By.className("introDescription_hkI3"));
         String description = regionDescription.getText();
-        jo.put("description", description.split("\n"));
+        JSONArray array = new JSONArray();
+        for(String line : description.split("\n")) {
+            if(line.trim().equals("")) continue;
+            array.add(line.trim());
+        }
+        jo.put("description", array);
 
         return jo;
     }
@@ -154,7 +157,8 @@ public class UniverseKoSearcher extends CrawlingSearcher {
         for(WebElement content : contents.findElements(By.className("root_3Kft"))) {
             for(String line : cleanHtml(content.getAttribute("innerHTML")).split("\n")) {
                 if(line.trim().equals("") || titleList.contains(line)) continue;
-                document.add(line);
+                if(line.endsWith(" 읽기")) continue;
+                document.add(line.trim());
             }
         }
         jo.put("document", document);

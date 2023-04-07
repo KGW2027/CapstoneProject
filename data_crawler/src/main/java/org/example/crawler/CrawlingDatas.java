@@ -22,7 +22,7 @@ public class CrawlingDatas extends HashMap<String, Object> {
         this.fileName = "";
     }
 
-    private synchronized String makeJson() {
+    private synchronized void saveJson(File json) throws IOException {
         JSONArray array = new JSONArray();
         for(String key : keySet()) {
             Object value = get(key);
@@ -39,24 +39,44 @@ public class CrawlingDatas extends HashMap<String, Object> {
         }
         Gson gson = new GsonBuilder().setPrettyPrinting().create();
         JsonElement ge = JsonParser.parseString(array.toJSONString());
-        return gson.toJson(ge);
+
+        BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(json)));
+        writer.write(gson.toJson(ge));
+        writer.flush();
+        writer.close();
+    }
+
+    private synchronized void saveRaw(File raw) throws IOException {
+        JSONObject jo = new JSONObject();
+        for(String key : keySet()) {
+            jo.put(key, get(key));
+        }
+        BufferedWriter writer = new BufferedWriter(new FileWriter(raw));
+        writer.write(jo.toJSONString());
+        writer.flush();
+        writer.close();
     }
 
     public synchronized void save() throws IOException {
-        if(keySet().size() == 0) return;
+        try {
+            if (keySet().size() == 0) return;
 
-        if(fileName.equals("")) fileName = "save_ckpt";
-        String dir = FILE_PARENT.replace("{title}", title).replace("{text}", fileName);
-        File file = new File(dir);
-        if(!file.getParentFile().exists()) file.getParentFile().mkdirs();
-        if(!file.exists()) file.createNewFile();
+            if (fileName.equals("")) fileName = "save_ckpt";
+            String dir = FILE_PARENT.replace("{title}", title).replace("{text}", fileName);
+            String raw = FILE_PARENT.replace("{title}", title).replace("{text}", fileName+"-raw");
+            File jsonFile = new File(dir);
+            File rawFile = new File(raw);
+            if (!jsonFile.getParentFile().exists()) jsonFile.getParentFile().mkdirs();
+            if (!jsonFile.exists()) jsonFile.createNewFile();
+            if (!rawFile.exists()) rawFile.createNewFile();
 
-        System.out.printf("[%s]에 저장 완료.\n", file.getCanonicalPath());
-
-        BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file)));
-        writer.write(makeJson());
-        writer.flush();
-        writer.close();
+            System.out.printf("[%s]에 저장 시작.\n", jsonFile.getCanonicalPath());
+            saveRaw(rawFile);
+            saveJson(jsonFile);
+            System.out.printf("[%s]에 저장 완료.\n", jsonFile.getCanonicalPath());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     private void append(String text) {
