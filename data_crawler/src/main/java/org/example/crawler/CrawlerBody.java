@@ -8,6 +8,7 @@ import org.openqa.selenium.support.ui.ExpectedConditions;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -28,8 +29,12 @@ public class CrawlerBody {
     private CrawlingQueue queue;
     private CrawlingSearcher searcher;
     private List<String> blacklists;
-    private String waitCss;
+    private boolean cssSetted;
     private int threadCount, attempt;
+
+    private HashMap<Thread, ChromeDriver> claimDrivers;
+    private HashMap<Thread, List<String>> threadURLs;
+    private int searchEnd;
 
     private ChromeDriver driver;
 
@@ -38,10 +43,13 @@ public class CrawlerBody {
         this.URL_PREFIX = queue.getPrefix().toLowerCase();
         this.queue = queue;
         this.searcher = searcher.setBody(this);
-        this.waitCss = "";
+        this.cssSetted = false;
         this.blacklists = new ArrayList<>();
         this.threadCount = 1;
         this.attempt = 0;
+        this.searchEnd = 0;
+        claimDrivers = new HashMap<>();
+        threadURLs = new HashMap<>();
 
         this.searcher.addExpectPrefix(URL_PREFIX);
         driver = new ChromeDriver()
@@ -55,6 +63,7 @@ public class CrawlerBody {
      */
     public CrawlerBody setWaitCss(String waitCss) {
         this.driver.setWait(ExpectedConditions.presenceOfElementLocated(By.cssSelector(waitCss)));
+        cssSetted = true;
         return this;
     }
 
@@ -73,8 +82,9 @@ public class CrawlerBody {
      * @param blacklist contains로 탐색할 텍스트
      * @return self
      */
-    public CrawlerBody addBlacklist(String blacklist) {
-        this.blacklists.add(blacklist.toLowerCase());
+    public CrawlerBody addBlacklist(String... blacklist) {
+        for(String black : blacklist)
+            this.blacklists.add(black.toLowerCase());
         return this;
     }
 
@@ -145,15 +155,54 @@ public class CrawlerBody {
         }
     }
 
+    private synchronized void end() {
+        printMessage(String.format("Occur end %d", this.searchEnd));
+        if(++this.searchEnd == this.threadCount)
+            save(getAttempt());
+    }
+
     /**
      * 탐색 시작
      */
     public void start() {
-        if(waitCss.equals("")) setWaitCss("body");
+        if(!cssSetted) setWaitCss("body");
         ExecutorService executor = Executors.newFixedThreadPool(this.threadCount);
         for(int cnt = 0 ; cnt < this.threadCount ; cnt++) {
             executor.submit(this::run);
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
         }
+    }
+
+    /**
+     * 현재 스레드의 드라이버 반환
+     */
+    public ChromeDriver getDriver() {
+        return claimDrivers.get(Thread.currentThread());
+    }
+
+    public void printMessage(String message) {
+        System.out.printf("[%s] %s\n", Thread.currentThread().getName().replace("pool-1-", ""), message);
+    }
+
+    public synchronized void updateMessage(String newUrl) {
+        StringBuilder sb = new StringBuilder();
+        String messageFormat = "%s (%03d) :: %s\n";
+        for(Thread thread : claimDrivers.keySet()) {
+            if(!threadURLs.containsKey(thread)) threadURLs.put(thread, new ArrayList<>());
+            if(thread == Thread.currentThread()) threadURLs.get(thread).add(newUrl);
+
+            String name = thread.getName().replace("pool-1-", "");
+            int size = threadURLs.get(thread).size();
+            String url = size > 0
+                    ? threadURLs.get(thread).get(size-1)
+                    : "None";
+            sb.append(String.format(messageFormat, name, size, url));
+        }
+        System.out.printf("[Current Status]\n%s\n", sb);
     }
 
     /**
@@ -163,50 +212,47 @@ public class CrawlerBody {
     private synchronized int getAttempt() {
         return attempt;
     }
-    private synchronized void addAttempt() {
-        if(++attempt % 100 == 0) save(attempt);
-    }
 
     private void run() {
         ChromeDriver threadDriver = driver.clone();
         threadDriver.init();
-        boolean syncWait = false;
+        claimDrivers.put(Thread.currentThread(), threadDriver);
+        int wait = 0;
 
-        int selfAttempt = 0;
-        String threadName = Thread.currentThread().getName();
-
+        printMessage("Start to run");
         do {
-
             String url = queue.poll();
+
             if(url == null) {
-                if(syncWait) break;
-                syncWait = true;
+                if(++wait >= 4) break;
                 try {
                     Thread.sleep(10 * 1000);
                 } catch (InterruptedException e) {
                     throw new RuntimeException(e);
                 }
+                printMessage("[Sync Wait]");
                 continue;
             }
             if(!isTargetDocs(url)) continue;
 
-            addAttempt();
-            System.out.printf("[%s-%03d :: Attempt %04d] %s\n", threadName, ++selfAttempt, getAttempt(), url);
+            updateMessage(url);
 
             try {
                 threadDriver.connect(url);
             } catch (TimeoutException timeout) {
-                System.out.printf("[URL %s]에 대한 탐색 중 시간초과 발생\n", url);
+                printMessage(String.format("URL [%s] 탐색 중 Timeout", url));
+                continue;
             }
 
             try {
                 searcher.search(url.replace(URL_PREFIX, ""), queue, threadDriver.findElement(By.tagName("body")));
             } catch (Exception ex) {
-                System.out.printf("===> ! %s ! <====\n", ex.getClass().toString());
-                System.out.printf("[Thread-%s][URL %s]에 대한 탐색 중 오류 발생\n", Thread.currentThread().getName(), url);
+                printMessage(String.format("===> ! %s ! <====\n", ex.getClass().toString()));
+                printMessage(String.format("URL [%s] 탐색 중 Exception\n", url));
                 for(StackTraceElement stacktrace : ex.getStackTrace()) {
-                    System.out.println(stacktrace.toString());
+                    printMessage(stacktrace.toString());
                 }
+                continue;
             }
 
             int[] size = queue.size();
@@ -214,7 +260,8 @@ public class CrawlerBody {
 
         }while(!queue.isEmpty());
 
-        save(attempt);
+        printMessage("Out of Loop");
+        end();
         threadDriver.close();
     }
 }

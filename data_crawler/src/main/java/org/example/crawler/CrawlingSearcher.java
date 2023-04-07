@@ -29,7 +29,7 @@ public abstract class CrawlingSearcher {
     protected boolean isExpect(String url) {
         url = url.toLowerCase();
         for(String prefix : prefixes)
-            if(prefix.startsWith(url)) return true;
+            if(url.startsWith(prefix)) return true;
         return false;
     }
 

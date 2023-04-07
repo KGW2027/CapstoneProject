@@ -22,7 +22,7 @@ public class CrawlingDatas extends HashMap<String, Object> {
         this.fileName = "";
     }
 
-    private String makeJson() {
+    private synchronized String makeJson() {
         JSONArray array = new JSONArray();
         for(String key : keySet()) {
             Object value = get(key);
@@ -42,7 +42,7 @@ public class CrawlingDatas extends HashMap<String, Object> {
         return gson.toJson(ge);
     }
 
-    public void save() throws IOException {
+    public synchronized void save() throws IOException {
         if(keySet().size() == 0) return;
 
         if(fileName.equals("")) fileName = "save_ckpt";
@@ -50,6 +50,8 @@ public class CrawlingDatas extends HashMap<String, Object> {
         File file = new File(dir);
         if(!file.getParentFile().exists()) file.getParentFile().mkdirs();
         if(!file.exists()) file.createNewFile();
+
+        System.out.printf("[%s]에 저장 완료.\n", file.getCanonicalPath());
 
         BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file)));
         writer.write(makeJson());

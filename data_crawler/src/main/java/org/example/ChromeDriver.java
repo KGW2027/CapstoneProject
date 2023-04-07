@@ -22,6 +22,7 @@ public class ChromeDriver {
     private ExpectedCondition waitCondition;
     private boolean vpnSetted;
     private boolean isUseVpn, firstInit;
+    private WebDriverWait driverWait;
 
     public ChromeDriver() {
         String DRIVER = "./module/chromedriver_win32/chromedriver.exe";
@@ -53,6 +54,7 @@ public class ChromeDriver {
             options.addExtensions(new File("./module/vpn.crx"));
         }
         driver = new org.openqa.selenium.chrome.ChromeDriver(options);
+        driverWait = new WebDriverWait(driver, Duration.ofSeconds(timeout));
         vpnSetted = false;
         return this;
     }
@@ -87,7 +89,7 @@ public class ChromeDriver {
 
         driver.get(url);
         if(waitCondition != null)
-            new WebDriverWait(driver, Duration.ofSeconds(timeout)).until(waitCondition);
+            waitLoad(waitCondition, timeout);
     }
 
     public List<WebElement> findElements(By condition) {
@@ -96,6 +98,14 @@ public class ChromeDriver {
 
     public WebElement findElement(By condition) {
         return findElements(condition).get(0);
+    }
+
+    public void waitLoad(ExpectedCondition condition, long seconds) {
+        driverWait.withTimeout(Duration.ofSeconds(seconds)).until(condition);
+    }
+
+    public void waitLoad(long seconds) {
+        driverWait.withTimeout(Duration.ofSeconds(seconds));
     }
 
     public ChromeDriver clone() {
