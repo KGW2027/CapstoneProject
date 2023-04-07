@@ -13,7 +13,7 @@ public class UniverseKoQueue extends CrawlingQueue {
 
     @Override
     protected String preprocess(String prefix, String url) {
-        String url_prefix = isKorean ? "/ko_kr" : "/en_us";
+        String url_prefix = getPrefix();
         url = url.startsWith(url_prefix) ? url.replace(url_prefix, "") : url;
         String result = prefix + url;
 

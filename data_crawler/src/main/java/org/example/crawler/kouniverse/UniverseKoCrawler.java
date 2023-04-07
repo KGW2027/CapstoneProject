@@ -11,11 +11,14 @@ public class UniverseKoCrawler {
         UniverseKoQueue queue = new UniverseKoQueue(korean);
         new CrawlerBody(queue, new UniverseKoSearcher())
                 .setWaitCss("div.pageLoaded.hidden")
+//                .addQueueManually("/race/vastaya/")
                 .addQueueManually("/champions/")
                 .addQueueManually("/regions/")
 //                .addQueueManually("/odyssey/")
 //                .addQueueManually("/star-guardian/")
-                .addBlacklist("comic")
+                .addBlacklist("comic", "star-guardian", "odyssey", "kda", "explore")
+                .setThreadCount(4)
+//                .setHeadless()
                 .start();
     }
 }
