@@ -25,28 +25,27 @@ import java.util.concurrent.Executors;
 public class CrawlerBody {
 
     public final String URL_PREFIX;
-    private CrawlingDatas crawlDatas;
-    private CrawlingQueue queue;
-    private CrawlingSearcher searcher;
-    private List<String> blacklists;
+    private final CrawlingDatas crawlingDatas;
+    private final CrawlingQueue queue;
+    private final CrawlingSearcher searcher;
+    private final List<String> blacklists;
     private boolean cssSetted;
-    private int threadCount, attempt;
+    private int threadCount;
 
-    private HashMap<Thread, ChromeDriver> claimDrivers;
-    private HashMap<Thread, List<String>> threadURLs;
+    private final HashMap<Thread, ChromeDriver> claimDrivers;
+    private final HashMap<Thread, List<String>> threadURLs;
     private int searchEnd;
 
-    private ChromeDriver driver;
+    private final ChromeDriver driver;
 
     public CrawlerBody(CrawlingQueue queue, CrawlingSearcher searcher) {
-        this.crawlDatas = new CrawlingDatas(queue.getName());
+        this.crawlingDatas = new CrawlingDatas(queue.getName());
         this.URL_PREFIX = queue.getPrefix().toLowerCase();
         this.queue = queue;
         this.searcher = searcher.setBody(this);
         this.cssSetted = false;
         this.blacklists = new ArrayList<>();
         this.threadCount = 1;
-        this.attempt = 0;
         this.searchEnd = 0;
         claimDrivers = new HashMap<>();
         threadURLs = new HashMap<>();
@@ -113,11 +112,11 @@ public class CrawlerBody {
      * @param data 문서 데이터
      */
     public synchronized void addCrawlingData(String docName, CrawlingData data) {
-        crawlDatas.put(docName, data);
+        crawlingDatas.put(docName, data);
     }
 
     public synchronized void addCrawlingData(String docName, JSONObject data) {
-        crawlDatas.put(docName, data);
+        crawlingDatas.put(docName, data);
     }
     /**
      * URL에 블랙리스트의 단어들이 들어가있는지 확인함.
@@ -146,10 +145,10 @@ public class CrawlerBody {
      */
     private synchronized void save(int attempt) {
         try {
-            crawlDatas.clearName();
-            crawlDatas.appendDate();
-            crawlDatas.appendNum(attempt);
-            crawlDatas.save();
+            crawlingDatas.clearName();
+            crawlingDatas.appendDate();
+            crawlingDatas.appendNum(attempt);
+            crawlingDatas.save();
         } catch (IOException e) {
             System.out.printf("[저장 중 에러가 발생했습니다. :: %s]\n", e.getMessage());
         }
@@ -157,8 +156,8 @@ public class CrawlerBody {
 
     private synchronized void end() {
         printMessage(String.format("Occur end %d", this.searchEnd));
-        if(++this.searchEnd == this.threadCount)
-            save(getAttempt());
+        if(++this.searchEnd >= this.threadCount)
+            save(0);
     }
 
     /**
@@ -205,21 +204,12 @@ public class CrawlerBody {
         System.out.printf("[Current Status]\n%s\n", sb);
     }
 
-    /**
-     * 자동 저장을 위한 Attempt, 멀티 스레드를 위해 동기로 처리
-     * @return attempt
-     */
-    private synchronized int getAttempt() {
-        return attempt;
-    }
-
     private void run() {
         ChromeDriver threadDriver = driver.clone();
         threadDriver.init();
         claimDrivers.put(Thread.currentThread(), threadDriver);
         int wait = 0;
 
-        printMessage("Start to run");
         do {
             String url = queue.poll();
 
