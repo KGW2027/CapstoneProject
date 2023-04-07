@@ -24,7 +24,6 @@ import java.util.concurrent.Executors;
 public class CrawlerBody {
 
     public final String URL_PREFIX;
-//    private WebDriver driver;
     private CrawlingDatas crawlDatas;
     private CrawlingQueue queue;
     private CrawlingSearcher searcher;
@@ -34,9 +33,9 @@ public class CrawlerBody {
 
     private ChromeDriver driver;
 
-    public CrawlerBody(String name, String urlPrefix, CrawlingQueue queue, CrawlingSearcher searcher) {
-        this.crawlDatas = new CrawlingDatas(name);
-        this.URL_PREFIX = urlPrefix.toLowerCase();
+    public CrawlerBody(CrawlingQueue queue, CrawlingSearcher searcher) {
+        this.crawlDatas = new CrawlingDatas(queue.getName());
+        this.URL_PREFIX = queue.getPrefix().toLowerCase();
         this.queue = queue;
         this.searcher = searcher.setBody(this);
         this.waitCss = "";
