@@ -1,10 +1,12 @@
 # PyTorch Install : pip install torch==1.12.0+cu113 torchvision==0.13.0+cu113 torchaudio==0.12.0 --extra-index-url https://download.pytorch.org/whl/cu113
 # Transformer Install : pip install transformers==4.10.0
 # 그 외에 tqdm(progress_bar), Korpora(Korean dataset) 설치
+import math
 import os
 import random
 
-from models.dataset import AiHubProcessor
+from models.dataset.aihub import AiHubProcessor
+from models.dataset.nikl import NIKLDataset, NIKLProcessor
 from models.model.AGLMHeadModel import AGLMHeadModel
 
 os.environ['TRANSFORMERS_CACHE'] = './transformers/cache/'
@@ -19,13 +21,13 @@ def run_lol01():
         text = gens[idx].replace('. ', '.\n')
         print(f"결과 {idx+1} ::\n{text}\n")
 
-def main():
-    model = AGLMHeadModel(model_name='skt/kogpt2-base-v2', data_processor=AiHubProcessor.AiHub20(), load_ckpt=True)
+def loadAIHUB20():
+    model = AGLMHeadModel(model_name='skt/kogpt2-base-v2', data_processor=[AiHubProcessor.AiHub20()], load_ckpt=True)
     # model.start_train(num_epochs=10, batch_size=32, gradient_checkpointing=False, gradient_accumulation_steps=1)
 
     gender = 'female'
     age = 20
-    
+
     test_case = [
         ['질문하기', '오늘 저녁 뭐 먹었어?'],
         ['질문하기', '떡볶이 좋아하니?'],
@@ -60,4 +62,33 @@ def main():
     # sentences = model.generate_sentence('female', 20, '질문하기', '오늘 저녁 뭐 먹었어?')
     # print(sentences)
 
+def main():
+    processor = [
+        AiHubProcessor.AiHub20(),
+        NIKLProcessor.NiklDialogueProcessor(),
+    ]
+    model = AGLMHeadModel(model_name='skt/kogpt2-base-v2', data_processor=processor, load_ckpt=True, ckpt_name='aglm2')
+    # model.start_train(num_epochs=5, batch_size=32)
+
+    questions = [
+        '오늘 저녁은 뭐먹었어?',
+        '안녕? 이름이 뭐니?',
+        '그 영화 재밌더라',
+        '광주 비엔날레 가본적 있어?',
+        '<name>이 알아?'
+    ]
+
+    personas = [
+        ['female', 10],
+        ['female', 20],
+        ['male', 10],
+        ['male', 20]
+    ]
+
+    for persona in personas:
+        print(f'-----\t----> Persona : Gender : {persona[0]}, Age : {persona[1]} <----\t-----')
+        for question in questions:
+            sentences = model.generate_sentence(gender=persona[0], age=persona[1], prompt=question)
+            print(f'Q : {question}\nA : {sentences[random.randint(0, len(sentences)-1)]}')
+            print(f'전체 후보군 : {sentences}\n')
 main()

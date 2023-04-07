@@ -1,13 +1,12 @@
 import json
 import math
-import os
 import re
 from collections import defaultdict
 
 from tqdm import tqdm
 
 import GraphGenerator
-from models import DatasetManager
+from models.dataset.core import DataProcessor
 
 emotes = {
     "<laugh>": r'(?!ㄱ)[ㅋㄱ]+|[ㅋㅎ]+|(ㅋㅅㅋ)|키키+|크크+|하하+',
@@ -89,14 +88,9 @@ def view_tokens_length_statistics_sns(json_obj, tokenizer):
 
 def preprocess_message(message):
     # Specific Token Replacing & Masking
-    replaces = {
-        "<name>": ["이름", "신원", "계정", "번호", "전번"],
-        "<belong>": ["소속", "주소"],
-        "<place>": ['장소', '위치']
-    }
-    for k, v in replaces.items():
-        for tgt in v:
-            message = message.replace('#@' + tgt + '#', k)
+    specials = re.findall('[*#@]+', message)
+
+    message = re.sub(r'\*+', '<name>', message)
 
     for key in emote_keys:
         message = re.sub(emotes[key], key, message)
@@ -107,78 +101,19 @@ def preprocess_message(message):
 
     # Special Character Short
     message = re.sub(r"!+\?+|\?+!+", '?!', message)
-    message = re.sub(r'\.{3,}', '...', message)
+    message = re.sub(r'\.{3,}', '<mop>', message)
     message = re.sub(r'\s+', ' ', message)
 
     return message
-
-
-
-def getPath(name:str):
-    parent = f'G:/Datasets/{name}/'
-    return parent+'train', parent+'valid'
-
-def getFiles(path:str):
-    files = []
-    for fname in os.listdir(path):
-        file = path + '/' + fname
-        if os.path.isfile(file):
-            files.append(file)
-        elif os.path.isdir(file):
-            files += getFiles(file)
-    return files
-
-class DataProcessor:
-    def __init__(self):
-        self.train = []
-        self.dev = []
-
-    def load(self):
-        train, valid = getPath(self.getName())
-        self.internal_load(getFiles(train), self.train)
-        self.internal_load(getFiles(valid), self.dev, train_mode=False)
-
-    def internal_load(self, files: list, array: list, train_mode: bool = True, save_cache: bool = True, load_cache: bool = True):
-        mode = 'train' if train_mode else 'dev'
-
-        if load_cache:
-            load = DatasetManager.load_dataset_ckpt(f'{self.getName()}-{mode}')
-            if load is not None:
-                print('load dataset cache')
-                if train_mode:
-                    self.train += load
-                else:
-                    self.dev += load
-                return None
-
-
-        for file_name in tqdm(files):
-            with open(file_name, 'r', encoding='utf-8') as json_file:
-                data = json.load(json_file)
-                process = self.process(data)
-                if process is None:
-                    continue
-                array.append(process)
-
-        if save_cache:
-            DatasetManager.save_dataset_ckpt(f'{self.getName()}-{mode}', array)
-
-    def getName(self):
-        return None
-
-    def process(self, data):
-        return None
-
-    def get(self):
-        return self.train, self.dev
-
-
 
 class AiHub20(DataProcessor):
     def __init__(self):
         super().__init__()
         self.acts = defaultdict(int)
         self.ags = defaultdict(int)
+
+    def load(self, train_suffix:str = '', dev_suffix:str = '', load_dev:bool = True):
+        super().load(train_suffix='train', dev_suffix='valid', load_dev=True)
 
     def getName(self):
         return 'aihub_20'
@@ -201,30 +136,33 @@ class AiHub20(DataProcessor):
         if annotations['speaker_type'] != '1:1':
             return None
 
-        lines = annotations['lines']
-        bef_pid = -1
-        bef_act = -1
-        prev_context = ''
-        now_context = ''
-        for line in lines:
+        prev_talker = -1
+        prev_talk = ''
+        curr_talk = ''
+        for line in annotations['lines']:
             context = preprocess_message(line['norm_text']).strip()
             persona = self.get_ag(line['speaker'])
-            act = self.get_act(line['speechAct'])
             pid = line['speaker']['id'][:1]
-            self.acts[act] += 1
 
-            now_context = context if now_context == '' else (now_context + '<s>' + context)
-            if bef_pid != pid:
-                if prev_context != '':
-                    concat = prev_context + ag_token + persona + act_token + bef_act + res_token + now_context
+            curr_talk = context if curr_talk == '' else (curr_talk + '<s>' + context)
+            if prev_talker != pid:
+                if prev_talk != '':
+                    concat = self.formatting(prev_talk, persona, curr_talk)
                     dialogues.append(concat)
                     self.ags[persona] += 1
-                prev_context = now_context
-                bef_act = act
-                now_context = ''
-            bef_pid = pid
+                prev_talk = curr_talk
+                curr_talk = ''
+            prev_talker = pid
+
+        if prev_talk != '' and curr_talk != '':
+            concat = self.formatting(prev_talk, persona, curr_talk)
+            dialogues.append(concat)
+
 
         return dialogues
+
+    def tokens(self):
+        return list(emotes.keys()) + ['<name>', '<belong>', '<place>']
 
     def check(self):
         print(self.ags)
