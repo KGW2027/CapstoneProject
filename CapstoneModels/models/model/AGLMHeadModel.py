@@ -5,7 +5,6 @@ from transformers import GPT2LMHeadModel, TrainingArguments, Trainer, IntervalSt
     GPT2TokenizerFast, DataCollatorForLanguageModeling
 
 from models import ModelManager
-from models.dataset.aihub import AiHubProcessor
 from models.dataset.core import TrainDataset
 
 
@@ -99,14 +98,14 @@ class AGLMHeadModel:
         output = self.model.generate(input_ids=input_ids,
                                      num_return_sequences = 4,
                                      max_length=64,
-                                     return_dict_in_generate=True,
-                                     temperature=0.9,
+                                     no_repeat_ngram_size=2,
+                                     temperature=1.0,
                                      do_sample=True,
                                      top_k=50,
                                      top_p=0.92,
                                      )
         response = []
-        for sentence in output['sequences']:
+        for sentence in output:
             sentence = self.tokenizer.decode(sentence, skip_special_tokens=False)
             sentence = sentence.replace('<bored>', '').replace('<scare>', 'ㄷㄷ').replace('<laugh>', 'ㅋㅋ').replace('<sad>', 'ㅠㅠ').replace('<unk>', '')
             sentence = re.findall('<response>([^<]*)', sentence)[0].strip()

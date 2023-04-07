@@ -88,14 +88,9 @@ def view_tokens_length_statistics_sns(json_obj, tokenizer):
 
 def preprocess_message(message):
     # Specific Token Replacing & Masking
-    replaces = {
-        "<name>": ["이름", "신원", "계정", "번호", "전번"],
-        "<belong>": ["소속", "주소"],
-        "<place>": ['장소', '위치']
-    }
-    for k, v in replaces.items():
-        for tgt in v:
-            message = message.replace('#@' + tgt + '#', k)
+    specials = re.findall('[*#@]+', message)
+
+    message = re.sub(r'\*+', '<name>', message)
 
     for key in emote_keys:
         message = re.sub(emotes[key], key, message)
@@ -106,7 +101,7 @@ def preprocess_message(message):
 
     # Special Character Short
     message = re.sub(r"!+\?+|\?+!+", '?!', message)
-    message = re.sub(r'\.{3,}', '...', message)
+    message = re.sub(r'\.{3,}', '<mop>', message)
     message = re.sub(r'\s+', ' ', message)
 
     return message
