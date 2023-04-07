@@ -65,6 +65,18 @@ public abstract class CrawlingQueue {
      */
     public abstract boolean isPreSearch(String url);
 
+    /**
+     * 데이터셋의 이름 설정
+     * @return name of dataset
+     */
+    public abstract String getName();
+
+    /**
+     * 데이터셋이 접속할 URL의 접두사 부분 설정
+     * @return url prefix of search target
+     */
+    public abstract String getPrefix();
+
     public synchronized void addQueue(String prefix, String url) {
         url = preprocess(prefix, url);
         if(isSearched(url)) return;

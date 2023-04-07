@@ -11,15 +11,12 @@ import org.json.simple.parser.JSONParser;
 
 import java.io.*;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Objects;
-import java.util.stream.Collectors;
 
 public class JsonCleaner {
 
     public static void main(String[] args) throws Exception {
-        File file = new File("./data/processing/fandom-en-base-translated.json");
+        File file = new File("./data/univ_ko/2023_04_07_16_06_22-0000-raw.json");
         BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(file)));
         StringBuilder sb = new StringBuilder();
         String line;
@@ -27,7 +24,7 @@ public class JsonCleaner {
 
         JSONArray array = (JSONArray) new JSONParser().parse(sb.toString());
 
-        cleanFandom(array);
+//        cleanFandom(array);
     }
 
     private static void cleanFandom(JSONArray array) throws IOException {

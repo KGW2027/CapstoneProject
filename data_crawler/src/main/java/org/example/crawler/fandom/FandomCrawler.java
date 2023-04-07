@@ -6,14 +6,12 @@ import org.example.crawler.CrawlingQueue;
 public class FandomCrawler {
 
     public static void main(String[] args) {
-        String prefix = "https://leagueoflegends.fandom.com/wiki";
-        String key = "Fandom";
 
-        CrawlingQueue queue = new FandomQueue(key)
-                .setSavemode(false)
+        FandomQueue queue = new FandomQueue("Fandom");
+        queue.setSavemode(false)
                 .loadCache()
                 ;
-        new CrawlerBody("fandom", prefix, queue, new FandomSearcher())
+        new CrawlerBody(queue, new FandomSearcher())
 //                .addQueueManually("/Category:Lore")
 //                .addQueueManually("/Crystal_Scar")
                 .setThreadCount(4)

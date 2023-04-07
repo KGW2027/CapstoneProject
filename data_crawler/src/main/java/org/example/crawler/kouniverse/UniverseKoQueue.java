@@ -4,15 +4,16 @@ import org.example.crawler.CrawlingQueue;
 
 public class UniverseKoQueue extends CrawlingQueue {
 
-    public UniverseKoQueue(String name) {
-        super(name);
+    public UniverseKoQueue(boolean isKorean) {
+        super(String.format("Universe-%s", isKorean?"Ko":"En"));
+        this.isKorean = isKorean;
     }
 
-    private final boolean isKorean = true;
+    private final boolean isKorean;
 
     @Override
     protected String preprocess(String prefix, String url) {
-        String url_prefix = isKorean ? "/ko_kr" : "/en_us";
+        String url_prefix = getPrefix();
         url = url.startsWith(url_prefix) ? url.replace(url_prefix, "") : url;
         String result = prefix + url;
 
@@ -24,9 +25,19 @@ public class UniverseKoQueue extends CrawlingQueue {
 
     @Override
     public boolean isPreSearch(String url) {
-        String replaced = isKorean
-                ? url.replace("https://universe.leagueoflegends.com/ko_kr", "")
-                : url.replace("https://universe.leagueoflegends.com/en_us", "");
+        String replaced = url.replace(getPrefix(), "");
         return replaced.split("/").length < 3;
+    }
+
+    @Override
+    public String getName() {
+        return String.format("univ_%s", isKorean?"ko":"en");
+    }
+
+    @Override
+    public String getPrefix() {
+        return isKorean
+                ? "https://universe.leagueoflegends.com/ko_kr"
+                : "https://universe.leagueoflegends.com/en_us";
     }
 }
