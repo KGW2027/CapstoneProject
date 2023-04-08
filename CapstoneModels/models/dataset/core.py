@@ -63,6 +63,9 @@ class DataProcessor:
         if save_cache:
             DatasetManager.save_dataset_ckpt(f'{self.getName()}-{mode}', array)
 
+    def is_unsupervised(self):
+        return True
+
     def getName(self):
         return None
 
@@ -79,8 +82,8 @@ class DataProcessor:
         return []
 
 
-class TrainDataset(Dataset):
-    def __init__(self, corpus, tokenizer, name:str = 'aglm_train', max_length:int = 128, stride: int = 32):
+class UnsupervisedDataset(Dataset):
+    def __init__(self, tokenizer, corpus=None, name:str = 'aglm_train', max_length:int = 128, stride: int = 32):
         self.corpus = DatasetManager.load_dataset_ckpt(name)
         self.tokenizer = tokenizer
         self.max_length = max_length
@@ -90,6 +93,8 @@ class TrainDataset(Dataset):
             self.corpus = []
             for value in tqdm(corpus):
                 for context in value:
+                    if type(context) is not str:
+                        continue
                     tokens = self.tokenizer(context)
                     length = len(tokens['input_ids'])
 
