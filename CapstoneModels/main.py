@@ -1,13 +1,14 @@
 # PyTorch Install : pip install torch==1.12.0+cu113 torchvision==0.13.0+cu113 torchaudio==0.12.0 --extra-index-url https://download.pytorch.org/whl/cu113
 # Transformer Install : pip install transformers==4.10.0
+# T5 모델 학습을 위해서는 sentencepiece와 protobuf==3.20.0 필요
 # 그 외에 tqdm(progress_bar), Korpora(Korean dataset) 설치
-import math
 import os
 import random
 
 from models.dataset.aihub import AiHubProcessor
-from models.dataset.nikl import NIKLDataset, NIKLProcessor
+from models.dataset.nikl import NIKLProcessor
 from models.model.AGLMHeadModel import AGLMHeadModel
+from models.model.KeT5Model import KeT5Model
 
 os.environ['TRANSFORMERS_CACHE'] = './transformers/cache/'
 
@@ -62,7 +63,7 @@ def loadAIHUB20():
     # sentences = model.generate_sentence('female', 20, '질문하기', '오늘 저녁 뭐 먹었어?')
     # print(sentences)
 
-def main():
+def gpt_test2():
     processor = [
         AiHubProcessor.AiHub20(),
         NIKLProcessor.NiklDialogueProcessor(),
@@ -91,4 +92,8 @@ def main():
             sentences = model.generate_sentence(gender=persona[0], age=persona[1], prompt=question)
             print(f'Q : {question}\nA : {sentences[random.randint(0, len(sentences)-1)]}')
             print(f'전체 후보군 : {sentences}\n')
+
+def main():
+    KeT5Model()
+
 main()
