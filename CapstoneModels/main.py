@@ -6,6 +6,7 @@ import os
 import random
 
 from models.dataset.aihub import AiHubProcessor
+from models.dataset.lol import LOLProcessor
 from models.dataset.nikl import NIKLProcessor
 from models.model.AGLMHeadModel import AGLMHeadModel
 from models.model.KeT5Model import KeT5Model
@@ -94,6 +95,7 @@ def gpt_test2():
             print(f'전체 후보군 : {sentences}\n')
 
 def main():
-    KeT5Model()
+    ket5_lol = KeT5Model(data_processor=[LOLProcessor.FandomProcessor(), LOLProcessor.UnivProcessor()], load_ckpt=False, ckpt_name='ket5_lol')
+    ket5_lol.start_train(unsupervised_batch_size=4)
 
 main()
