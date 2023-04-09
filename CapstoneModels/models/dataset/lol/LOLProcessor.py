@@ -91,34 +91,8 @@ class FandomProcessor(DataProcessor):
         DatasetManager.save_dataset_ckpt('doc_names', titles, indent=' ')
         return dialogues
 
-    def tokens(self):
-        return []
-
-    def check(self):
-        pass
-
-def preprocess(context:str, is_title:bool = False):
-    context = re.sub('[0-9]+\n|\n[0-9]+', '', context)
-    context = context.replace('\n', '')
-    if is_title:
-        context = re.sub('\(\w+\)', '', context)
-        context = context.replace('_', ' ')
-        context = context.split(':')[0]
-        context = re.sub('Part [0-9]+', '', context)
-        return context[1:]
-    return context
-
-def clear_tabKey(key:str):
-    key = key.replace('/Lore/', '')
-    return key
-
-def get_nouns():
-    return DatasetManager.load_dataset_ckpt('proper_nouns')
-
-def ulrul(korean):
-    code = (ord(korean[-1]) - 44032) % 28
-    return '는' if code == 0 else '은'
-
+    def get_tags(self):
+        return ['game_unsupervised']
 
 class UnivProcessor(DataProcessor):
     def __init__(self):
@@ -143,8 +117,5 @@ class UnivProcessor(DataProcessor):
 
         return dialogues
 
-    def tokens(self):
-        return []
-
-    def check(self):
-        pass
+    def get_tags(self):
+        return ['game_unsupervised']

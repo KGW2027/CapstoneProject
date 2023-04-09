@@ -7,7 +7,7 @@ from tqdm import tqdm
 from transformers import PreTrainedTokenizerFast, GPT2ForSequenceClassification
 
 from models import ModelManager
-from models.dataset.aihub import AiHubProcessor, AiHubDataset
+from models.dataset.aihub import AiHubProcessor
 
 
 class AGClassifier:
@@ -28,10 +28,11 @@ class AGClassifier:
 
 
     def generate_dataset(self):
-        load = AiHubDataset.generate_SNS_dataset(self.tokenizer, use_ratio=0.3)
-        self.train = load['train']
-        self.dev = load['dev']
-        self.test = load['test']
+        pass
+        # load = AiHubDataset.generate_SNS_dataset(self.tokenizer, use_ratio=0.3)
+        # self.train = load['train']
+        # self.dev = load['dev']
+        # self.test = load['test']
 
     def view_length_distributes(self, datas):
         AiHubProcessor.view_tokens_length_statistics_sns(datas, self.tokenizer)
