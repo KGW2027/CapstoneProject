@@ -1,3 +1,4 @@
+import gc
 import json
 import math
 import os
@@ -22,6 +23,13 @@ def getFiles(path:str):
         elif os.path.isdir(file):
             files += getFiles(file)
     return files
+
+def padding(tokens, max_length:int, pad_token:int):
+    length = len(tokens)
+    remain = max_length - length
+    input_ids = tokens + ([pad_token] * remain)
+    attention_mask = [1] * length + [0] * remain
+    return {'input_ids': input_ids, 'attention_mask': attention_mask}
 
 
 class DataProcessor:
@@ -99,30 +107,25 @@ class UnsupervisedDataset(Dataset):
 
                     adds = []
                     if length <= self.max_length:
-                        adds.append(self.padding(tokens['input_ids']))
+                        adds.append(padding(tokens['input_ids'], max_length=self.max_length, pad_token=self.pad_token))
                     else:
                         # Sliding Window
                         end_length = self.max_length
                         while length > end_length:
-                            adds.append(self.padding(tokens['input_ids'][end_length-self.max_length:end_length]))
+                            adds.append(padding(tokens['input_ids'][end_length-self.max_length:end_length], max_length=self.max_length, pad_token=self.pad_token))
                             end_length += stride
-                        adds.append(self.padding(tokens['input_ids'][end_length-self.max_length:end_length]))
+                        adds.append(padding(tokens['input_ids'][end_length-self.max_length:end_length], max_length=self.max_length, pad_token=self.pad_token))
 
                     self.corpus += adds
             DatasetManager.save_dataset_ckpt(name, self.corpus, indent='')
+        del corpus
+        gc.collect()
 
     def __getitem__(self, item):
         return self.corpus[item]
 
     def __len__(self):
         return len(self.corpus)
-
-    def padding(self, tokens):
-        length = len(tokens)
-        remain = self.max_length - length
-        input_ids = tokens + ([self.pad_token] * remain)
-        attention_mask = [1] * length + [0] * remain
-        return {'input_ids': input_ids, 'attention_mask': attention_mask}
 
 class SummarizeDataset(Dataset):
     def __init__(self, tokenizer, corpus=None, name:str='summarize_aihub', context_max_length:int = 512, answer_max_length:int = 128, stride: int = 32):
@@ -143,6 +146,8 @@ class SummarizeDataset(Dataset):
                     }
                     self.corpus.append(data)
             DatasetManager.save_dataset_ckpt(name, self.corpus, indent='')
+        del corpus
+        gc.collect()
 
     def __getitem__(self, item):
         return self.corpus[item]

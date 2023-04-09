@@ -32,7 +32,7 @@ def save_dataset_ckpt(name, value, indent:str = ' '):
     os.makedirs(dir_prefix, exist_ok=True)
     path = f'{dir_prefix}{name}{file_suffix}'
     with open(path, 'w+', encoding='utf-8') as ckpt_file:
-        print(f'save_dataset-{name} -> {len(str(value)):,3} Chars')
+        print(f'save_dataset-{name} -> {len(str(value)):,} Chars')
         if indent == '':
             json.dump(value, ckpt_file)
         else:
