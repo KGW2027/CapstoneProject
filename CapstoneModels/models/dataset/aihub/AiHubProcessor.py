@@ -169,3 +169,28 @@ class AiHub20(DataProcessor):
         print(self.acts)
         print(len(self.train))
         print(len(self.dev))
+
+class AiHub22(DataProcessor):
+    def __init__(self):
+        super().__init__()
+        self.acts = defaultdict(int)
+        self.ags = defaultdict(int)
+
+    def load(self, train_suffix:str = '', dev_suffix:str = '', load_dev:bool = True):
+        super().load(train_suffix='train', dev_suffix='valid', load_dev=True)
+
+    def getName(self):
+        return 'aihub_22'
+
+    def process(self, data):
+
+        context = data['Meta(Refine)']['passage'].replace('\n', '').lower().strip()
+        summaries = []
+        for k, v in data['Annotation'].items():
+           if type(v) is str:
+                summaries.append(v.lower().strip())
+
+        return {'context': context, 'summaries': summaries}
+
+    def get_tags(self):
+        return ['real_summarize']

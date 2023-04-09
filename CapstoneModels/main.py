@@ -95,7 +95,12 @@ def gpt_test2():
             print(f'전체 후보군 : {sentences}\n')
 
 def main():
-    ket5_lol = KeT5Model(data_processor=[LOLProcessor.FandomProcessor(), LOLProcessor.UnivProcessor()], load_ckpt=False, ckpt_name='ket5_lol')
-    ket5_lol.start_train(unsupervised_batch_size=4)
+    processors = [
+        # LOLProcessor.FandomProcessor(),
+        # LOLProcessor.UnivProcessor(),
+        AiHubProcessor.AiHub22()
+    ]
+    ket5_lol = KeT5Model(data_processor=processors, load_ckpt=True, ckpt_name='ket5_lol')
+    ket5_lol.start_train(batch_size=8, unsupervised_epoch=4, summarize_real_epoch=1)
 
 main()

@@ -44,7 +44,6 @@ class DataProcessor:
         if load_cache:
             load = DatasetManager.load_dataset_ckpt(f'{self.getName()}-{mode}')
             if load is not None:
-                print('load dataset cache')
                 if train_mode:
                     self.train += load
                 else:
@@ -63,8 +62,8 @@ class DataProcessor:
         if save_cache:
             DatasetManager.save_dataset_ckpt(f'{self.getName()}-{mode}', array)
 
-    def is_unsupervised(self):
-        return True
+    def get_tags(self):
+        return []
 
     def getName(self):
         return None
@@ -124,3 +123,29 @@ class UnsupervisedDataset(Dataset):
         input_ids = tokens + ([self.pad_token] * remain)
         attention_mask = [1] * length + [0] * remain
         return {'input_ids': input_ids, 'attention_mask': attention_mask}
+
+class SummarizeDataset(Dataset):
+    def __init__(self, tokenizer, corpus=None, name:str='summarize_aihub', context_max_length:int = 512, answer_max_length:int = 128, stride: int = 32):
+        self.corpus = DatasetManager.load_dataset_ckpt(name)
+
+        if self.corpus is None:
+            self.corpus = []
+            for value in tqdm(corpus):
+                context = value['context']
+                inputs = tokenizer(f'summarize: {context}', truncation=True, max_length=context_max_length, padding="max_length")
+                for output in value['summaries']:
+                    label = tokenizer(output, truncation=True, max_length=answer_max_length, padding="max_length")
+                    data = {
+                        'input_ids': inputs['input_ids'],
+                        'attention_mask': inputs['attention_mask'],
+                        'label_ids': label['input_ids'],
+                        'label_attention_mask': label['attention_mask'],
+                    }
+                    self.corpus.append(data)
+            DatasetManager.save_dataset_ckpt(name, self.corpus, indent='')
+
+    def __getitem__(self, item):
+        return self.corpus[item]
+
+    def __len__(self):
+        return len(self.corpus)
