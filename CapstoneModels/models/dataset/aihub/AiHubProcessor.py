@@ -171,6 +171,13 @@ class AiHub20(DataProcessor):
         print(len(self.dev))
 
 class AiHub22(DataProcessor):
+    def clean_message(self, text):
+        text = text.replace('\n', ' ')
+        text = re.sub(r'([^0-9a-zA-Z가-힣])\1+', r'\1', text)
+        text = re.sub(r'\(.*\)\s*|[\'"‘’“”·]', '', text)
+
+        return text.lower().strip()
+
     def __init__(self):
         super().__init__()
         self.acts = defaultdict(int)
@@ -184,11 +191,11 @@ class AiHub22(DataProcessor):
 
     def process(self, data):
 
-        context = data['Meta(Refine)']['passage'].replace('\n', '').lower().strip()
+        context = self.clean_message(data['Meta(Refine)']['passage'])
         summaries = []
         for k, v in data['Annotation'].items():
            if type(v) is str:
-                summaries.append(v.lower().strip())
+                summaries.append(self.clean_message(v))
 
         return {'context': context, 'summaries': summaries}
 

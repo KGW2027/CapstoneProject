@@ -5,15 +5,20 @@
 import os
 import random
 
+from tqdm import tqdm
+
+import datasets
+from models import korEDA, DatasetManager, DataAugmenter
+from transformers import AutoTokenizer, T5ForConditionalGeneration
 from models.dataset.aihub import AiHubProcessor
 from models.dataset.lol import LOLProcessor
 from models.dataset.nikl import NIKLProcessor
+from models.model import GameSummarization
 from models.model.AGLMHeadModel import AGLMHeadModel
 from models.model.KeT5Model import KeT5Model
+from models.model.GameModel01 import GameLolModel_t1
 
 os.environ['TRANSFORMERS_CACHE'] = './transformers/cache/'
-
-from models.model.GameModel01 import GameLolModel_t1
 
 def run_lol01():
     lol01 = GameLolModel_t1(max_length=64, batch_size=16, l_rate=5e-6)
@@ -25,7 +30,7 @@ def run_lol01():
 
 def loadAIHUB20():
     model = AGLMHeadModel(model_name='skt/kogpt2-base-v2', data_processor=[AiHubProcessor.AiHub20()], load_ckpt=True)
-    # model.start_train(num_epochs=10, batch_size=32, gradient_checkpointing=False, gradient_accumulation_steps=1)
+    model.start_train(num_epochs=10, batch_size=32, gradient_checkpointing=False, gradient_accumulation_steps=1)
 
     gender = 'female'
     age = 20
@@ -100,7 +105,72 @@ def main():
         LOLProcessor.UnivProcessor(),
         AiHubProcessor.AiHub22()
     ]
-    ket5_lol = KeT5Model(data_processor=processors, load_ckpt=False, ckpt_name='ket5_lol')
-    ket5_lol.start_train(batch_size=8, unsupervised_epoch=5, summarize_real_epoch=1)
+    ket5_lol = KeT5Model(data_processor=processors, load_ckpt=True, ckpt_name='ket5_lol')
+    ket5_lol.start_train(batch_size=2, unsupervised_epoch=0, summarize_real_epoch=1)
 
-main()
+    hub22 = AiHubProcessor.AiHub22()
+    hub22.load()
+    t, d = hub22.get()
+    print_cases = 1
+    for idx in range(print_cases):
+        print(f'\n\t=====\t=====> Case {idx+1} <=====\t=====')
+        context = d[idx]['context']
+        print(f'Context : {context}')
+        summarize = ket5_lol.generate_summarize(context)
+        print(f'Generated Summarize : {summarize}')
+
+        for sentence in d[idx]['summaries']:
+            print(f'Summarize Sentence : {sentence}')
+
+def main2():
+    model = GameSummarization.GameSummarizationModel(ckpt_name='game_ust', load_ckpt=False)
+    # model.train_game(gradient_step=8, batch_size=2, num_epochs=1, )
+    # model.train_summarize(gradient_step=8, batch_size=2, num_epochs=1,)
+    # model.test_summarize()
+    # model.test_game()
+    model.augment_game()
+
+
+def eda():
+    processors = [
+        LOLProcessor.FandomProcessor(),
+        LOLProcessor.UnivProcessor(),
+    ]
+    datas = []
+    for processor in processors:
+        processor.load()
+        t, d = processor.get()
+        datas += t[0]
+
+    augmented = []
+    for data in datas:
+        augmented += korEDA.EDA(data)
+    random.shuffle(augmented)
+    DatasetManager.save_dataset_ckpt('game_augments', augmented)
+
+    print(f'before : {len(datas)}\nafter : {len(augmented)}')
+
+def eda2():
+    datas = DatasetManager.load_dataset_ckpt('game_summarizes')
+
+    processors = [
+        LOLProcessor.FandomProcessor(),
+        LOLProcessor.UnivProcessor(),
+    ]
+    for processor in processors:
+        processor.load()
+        t, d = processor.get()
+        datas += t[0]
+
+    random.shuffle(datas)
+
+    augmented = []
+    for data in tqdm(datas):
+        augmented += korEDA.EDA(data, num_aug=4)
+    random.shuffle(augmented)
+    print(f'{len(datas)} -> {len(augmented)}')
+    DatasetManager.save_dataset_ckpt('game_augments', augmented)
+
+
+eda2()
+# DataAugmenter.augment_with_gpt()

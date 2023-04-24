@@ -2,8 +2,10 @@ import gc
 import json
 import math
 import os
+import random
 from collections import defaultdict
 
+import torch
 from torch.utils.data import Dataset
 from tqdm import tqdm
 
@@ -89,68 +91,73 @@ class DataProcessor:
         return []
 
 
-class UnsupervisedDataset(Dataset):
-    def __init__(self, tokenizer, corpus=None, name:str = 'aglm_train', max_length:int = 128, stride: int = 32):
-        self.corpus = DatasetManager.load_dataset_ckpt(name)
+class UnsupervisedDatasetWithLabel(Dataset):
+    def add_all(self, array:list):
+        for value in array:
+            if type(value) is list:
+                self.add_all(value)
+            else:
+                self.corpus.append(value)
+
+    def __init__(self, tokenizer, corpus=None):
+        self.corpus = []
+        self.add_all(corpus)
         self.tokenizer = tokenizer
-        self.max_length = max_length
-        self.pad_token = self.tokenizer(self.tokenizer.pad_token)['input_ids'][0]
-
-        if self.corpus is None:
-            self.corpus = []
-            for value in tqdm(corpus):
-                for context in value:
-                    if type(context) is not str:
-                        continue
-                    tokens = self.tokenizer(context)
-                    length = len(tokens['input_ids'])
-
-                    adds = []
-                    if length <= self.max_length:
-                        adds.append(padding(tokens['input_ids'], max_length=self.max_length, pad_token=self.pad_token))
-                    else:
-                        # Sliding Window
-                        end_length = self.max_length
-                        while length > end_length:
-                            adds.append(padding(tokens['input_ids'][end_length-self.max_length:end_length], max_length=self.max_length, pad_token=self.pad_token))
-                            end_length += stride
-                        adds.append(padding(tokens['input_ids'][end_length-self.max_length:end_length], max_length=self.max_length, pad_token=self.pad_token))
-
-                    self.corpus += adds
-            DatasetManager.save_dataset_ckpt(name, self.corpus, indent='')
-        del corpus
-        gc.collect()
 
     def __getitem__(self, item):
-        return self.corpus[item]
+        value = self.corpus[item]
+        tokenize = self.tokenizer(value, max_length=512, padding="max_length", truncation=True)
+        return {'input_ids': torch.tensor(tokenize['input_ids']), 'attention_mask': torch.tensor(tokenize['attention_mask']), 'labels': torch.tensor(tokenize['input_ids'])}
+
+    def __len__(self):
+        return len(self.corpus)
+
+
+class UnsupervisedDataset(Dataset):
+    def add_all(self, array: list):
+        for value in array:
+            if type(value) is list:
+                self.add_all(value)
+            else:
+                self.corpus.append(value)
+
+    def __init__(self, tokenizer, corpus=None):
+        self.corpus = []
+        self.add_all(corpus)
+        self.tokenizer = tokenizer
+
+    def __getitem__(self, item):
+        value = self.corpus[item]
+        tokenize = self.tokenizer(value, max_length=384, padding="max_length", truncation=True)
+        return {'input_ids': torch.tensor(tokenize['input_ids']),
+                'attention_mask': torch.tensor(tokenize['attention_mask']),
+                'labels': torch.tensor(tokenize['input_ids'])}
 
     def __len__(self):
         return len(self.corpus)
 
 class SummarizeDataset(Dataset):
-    def __init__(self, tokenizer, corpus=None, name:str='summarize_aihub', context_max_length:int = 512, answer_max_length:int = 128, stride: int = 32):
-        self.corpus = DatasetManager.load_dataset_ckpt(name)
-
-        if self.corpus is None:
-            self.corpus = []
-            for value in tqdm(corpus):
-                context = value['context']
-                inputs = tokenizer(f'summarize: {context}', truncation=True, max_length=context_max_length, padding="max_length")
-                for output in value['summaries']:
-                    label = tokenizer(output, truncation=True, max_length=answer_max_length, padding="max_length")
-                    data = {
-                        'input_ids': inputs['input_ids'],
-                        'attention_mask': inputs['attention_mask'],
-                        'label_ids': label['input_ids'],
-                        'label_attention_mask': label['attention_mask'],
-                    }
-                    self.corpus.append(data)
-            DatasetManager.save_dataset_ckpt(name, self.corpus, indent='')
-        del corpus
-        gc.collect()
+    def __init__(self, tokenizer, corpus=None, context_max_length:int = 512, answer_max_length:int = 128):
+        self.corpus = corpus
+        self.tokenizer = tokenizer
+        self.max_length = [context_max_length, answer_max_length]
 
     def __getitem__(self, item):
-        return self.corpus[item]
+        value = self.corpus[item]
+        context = value['context']
+        summaries = value['summaries']
+
+        inputs = self.tokenizer(f'summarize_summary: {context}', truncation=True, max_length=self.max_length[0], padding="max_length")
+        if type(summaries) is list:
+            summaries = summaries[1]
+
+        label = self.tokenizer(summaries, truncation=True, max_length=self.max_length[1], padding="max_length")
+        return {
+            'input_ids': inputs['input_ids'],
+            'attention_mask': inputs['attention_mask'],
+            'labels': label['input_ids'],
+            # 'label_attention_mask': label['attention_mask'],
+        }
 
     def __len__(self):
         return len(self.corpus)

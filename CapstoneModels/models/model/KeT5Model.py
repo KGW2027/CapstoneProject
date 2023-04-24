@@ -1,13 +1,13 @@
-import gc
+import re
 
 import torch
 from torch.optim import AdamW
 from torch.utils.data import DataLoader
 from tqdm import tqdm
-from transformers import AutoTokenizer, T5ForConditionalGeneration
+from transformers import AutoTokenizer, T5ForConditionalGeneration, Adafactor
 
 from models import ModelManager
-from models.dataset.core import UnsupervisedDataset, SummarizeDataset
+from models.dataset.core import UnsupervisedDatasetWithLabel, SummarizeDataset
 
 
 def split_dataloader(dataloader, length):
@@ -27,7 +27,7 @@ def split_dataloader(dataloader, length):
     return dataloaders
 
 class KeT5Model:
-    def __init__(self, data_processor: list, load_ckpt:bool = False, ckpt_name:str = 'ket5_qna'):
+    def __init__(self, data_processor: list, load_ckpt:bool = False, ckpt_name:str = 'ket5_finetuned'):
         if load_ckpt:
             model_path = ModelManager.load(ckpt_name)
             self.tokenizer = AutoTokenizer.from_pretrained(model_path)
@@ -49,7 +49,7 @@ class KeT5Model:
             processor.load()
             t, d = processor.get()
             unsupervised += t
-        return UnsupervisedDataset(tokenizer=self.tokenizer, corpus=unsupervised, max_length=128, stride=32, name='ket5_lol_unsupervised')
+        return SummarizeDataset(tokenizer=self.tokenizer, corpus=unsupervised)
 
     def _load_summaries(self):
         test = []
@@ -62,9 +62,9 @@ class KeT5Model:
             test += t
             dev += d
 
-        testset = SummarizeDataset(tokenizer=self.tokenizer, corpus=test, name='ket5_summarize_train', context_max_length= 512, answer_max_length=128)
-        devset = SummarizeDataset(tokenizer=self.tokenizer, corpus=dev, name='ket5_summarize_dev', context_max_length= 512, answer_max_length=128)
-        return testset, devset
+        test_set = SummarizeDataset(tokenizer=self.tokenizer, corpus=test, context_max_length=512, answer_max_length=128)
+        eval_set = SummarizeDataset(tokenizer=self.tokenizer, corpus=dev, context_max_length=512, answer_max_length=128)
+        return test_set, eval_set
 
     def _internal_test(self, batch, is_supervised):
         iid = torch.stack(batch['input_ids'], dim=0).transpose(0, 1).cuda()
@@ -91,7 +91,10 @@ class KeT5Model:
     def _internal_train_chunks(self, loader, epoch_info:int, is_eval:bool = False, is_supervised:bool = False, gradient_accumulation_steps:int = 1, chunk_size:int = 10000):
 
         seps = split_dataloader(loader, chunk_size * loader.batch_size)
+        custom_check_point = 1
         for idx in range(len(seps)):
+            if idx < custom_check_point:
+                continue
             desc = f'- Seperate {idx+1}/{len(seps)}'
             if is_eval:
                 loss = self._internal_dev(seps[idx], is_supervised=is_supervised, desc=desc)
@@ -101,13 +104,6 @@ class KeT5Model:
                 print(f'Epochs {epoch_info+1}. Sep-{idx+1} Train Result :: Loss - {loss:.4}')
 
             ModelManager.save(self.model, self.tokenizer, self.ckpt_name)
-            del self.model
-            del self.tokenizer
-            gc.collect()
-
-            model_path = ModelManager.load(self.ckpt_name)
-            self.tokenizer = AutoTokenizer.from_pretrained(model_path)
-            self.model = T5ForConditionalGeneration.from_pretrained(model_path)
 
 
 
@@ -158,31 +154,47 @@ class KeT5Model:
     def _internal_train_game(self, num_epochs:int, batch_size:int):
         unsupervised_dataset = self._load_unsupervised_game()
         unsupervised_loader = DataLoader(unsupervised_dataset, batch_size=batch_size, shuffle=True)
-        self.optimizer = AdamW(self.model.parameters(), lr=1e-4)
+        self.optimizer = AdamW(self.model.parameters(), lr=1e-5)
 
         # unsupervised train
         for epoch in range(num_epochs):
             print(f'[Game-Unsupervised] Epoch {epoch+1:02}')
-            self._internal_train_chunks(unsupervised_loader, chunk_size=60000, epoch_info=epoch)
+            self._internal_train_chunks(unsupervised_loader, chunk_size=60000, epoch_info=epoch, gradient_accumulation_steps=2)
 
 
-    def _internal_summarize_supervised(self, num_epochs:int, batch_size:int, divide:int):
-        batch_size = batch_size // divide
+    def _internal_summarize_supervised(self, num_epochs:int, batch_size:int):
         train, dev = self._load_summaries()
         summarize_train = DataLoader(train, batch_size=batch_size, shuffle=True)
         summarize_dev = DataLoader(dev, batch_size=batch_size)
-        self.optimizer = AdamW(self.model.parameters(), lr=5e-6)
+        self.optimizer = Adafactor(self.model.parameters(), lr=1e-3, relative_step=False, warmup_init=False, decay_rate=0.0, clip_threshold=1.0)
 
         for epoch in range(num_epochs):
             print(f'[Real-Summarize-Supervised] Epoch {epoch+1:02} - Train')
-            self._internal_train_chunks(summarize_train, gradient_accumulation_steps=divide, is_supervised=True, chunk_size=30000, epoch_info=epoch)
+            self._internal_train_chunks(summarize_train, gradient_accumulation_steps=2, is_supervised=True, chunk_size=30000, epoch_info=epoch)
             print(f'[Real-Summarize-Supervised] Epoch {epoch+1:02} - Dev')
             self._internal_train_chunks(summarize_dev, is_eval=True, is_supervised=True, chunk_size=30000, epoch_info=epoch)
 
-
-
     def start_train(self, batch_size:int = 4, unsupervised_epoch:int = 5, summarize_real_epoch:int = 1):
 
-        # self._internal_train_game(unsupervised_epoch, batch_size)
-        self._internal_summarize_supervised(num_epochs=summarize_real_epoch, batch_size=batch_size, divide=4)
+        if unsupervised_epoch > 0:
+            self._internal_train_game(num_epochs=unsupervised_epoch, batch_size=batch_size)
+        if summarize_real_epoch > 0:
+            self._internal_summarize_supervised(num_epochs=summarize_real_epoch, batch_size=batch_size)
 
+    def generate_summarize(self, input_str:str):
+        input_str = re.sub('\s+', ' ', input_str)
+        context = f'summarize: {input_str}'
+        input_tokens = self.tokenizer.encode(context, return_tensors='pt')
+
+        with torch.no_grad():
+            output_tokens = self.model.generate(
+                input_tokens,
+                max_length=128,
+                num_beams=5,
+                repetition_penalty=1,
+                length_penalty=1,
+                early_stopping=True,
+                no_repeat_ngram_size=2
+            )
+        summarize = self.tokenizer.decode(output_tokens[0], skip_special_tokens=True)
+        return summarize

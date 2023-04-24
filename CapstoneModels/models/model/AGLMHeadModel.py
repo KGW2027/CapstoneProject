@@ -5,7 +5,7 @@ from transformers import GPT2LMHeadModel, TrainingArguments, Trainer, IntervalSt
     GPT2TokenizerFast, DataCollatorForLanguageModeling
 
 from models import ModelManager
-from models.dataset.core import UnsupervisedDataset
+from models.dataset.core import UnsupervisedDatasetWithLabel
 
 
 class AGLMHeadModel:
@@ -53,7 +53,7 @@ class AGLMHeadModel:
         train, dev = self.load_processors()
         collator = DataCollatorForLanguageModeling(tokenizer=self.tokenizer, mlm=False)
 
-        train_dataset = UnsupervisedDataset(train, tokenizer=self.tokenizer, max_length=128)
+        train_dataset = UnsupervisedDatasetWithLabel(train, tokenizer=self.tokenizer, max_length=128)
 
         train_args = TrainingArguments(
             output_dir='G:/',
