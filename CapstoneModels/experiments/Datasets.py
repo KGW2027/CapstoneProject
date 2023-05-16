@@ -5,7 +5,7 @@ import re
 from torch.utils.data import Dataset
 from tqdm import tqdm
 
-from models import korEDA
+from models import korEDA, DatasetManager
 
 
 def load_csv_data(path):
@@ -41,7 +41,8 @@ class GameDialogue:
         'gender': ['gender', '성별'],
         'age': ['age', '나이', '연령'],
         'from': ['origin', '출신', '원산지', 'Hometown', '고향', '기원', 'region of origin', '출신 지역', '출신지역', '출신지', 'hometown', '기원 지역'],
-        'now': ['region', '지역', 'current location', '현재', '현 위치', '현 거주지', 'current', '현재 위치', '현재위치', '현재 거주지', 'current residence', 'currently living', '현생', '현', 'current region', '현재 지역', '현재지', '현재지역', '현 지역', '현지'],
+        'now': ['region', '지역', 'current location', '현재', '현 위치', '현 거주지', 'current', '현재 위치', '현재위치', '현재 거주지',
+                'current residence', 'currently living', '현생', '현', 'current region', '현재 지역', '현재지', '현재지역', '현 지역', '현지', '현재 사는 곳', '현재 거주', '거주지'],
         'race': ['race', '인종', '종족']
     }
 
@@ -81,6 +82,8 @@ class GameDialogue:
         if len(splits2) >= 2:
             self.answer = splits2[1].strip().lower()
             self.parse_attribute(attribute)
+        else:
+            print(data)
 
 class GameDialogueDatas:
     changes = {    }
@@ -154,7 +157,7 @@ class GameDialogueDatas:
         }
         for idx, lists in areas.items():
             if area in lists:
-                return idx
+                return int(idx)
         return -1
 
     def parse_prefix(self, attribute):
@@ -167,7 +170,7 @@ class GameDialogueDatas:
         prefixes = []
 
         prefix = f'talk_g{gender}_a{age}'
-        if fc >= 0 and nc >= 0:
+        if fc is not None and fc >= 0 and nc is not None and nc >= 0:
             prefix += f'_f{fc}_n{nc}'
             prefixes.append(prefix)
         else:
@@ -179,14 +182,18 @@ class GameDialogueDatas:
 
         return prefixes
 
-    @staticmethod
-    def formatting(task, question, answer):
-        return {'input': f'{task} : {question}', 'label': answer}
+    def formatting(self, task, question, answer):
+        if self.form == 't5':
+            return {'input': f'{task} : {question}', 'label': answer}
+        elif self.form == 'gpt2':
+            age = task.split('_a')[1][:1]
+            gender = '남성' if task.split('_f')[1][:1] == '0' else '여성'
+            return {'input': f'{question}에 대해 {age}0대 {gender}의 말투로 답변하라.'}
 
-    @staticmethod
-    def check_dup(arr:list, new: dict):
+
+    def check_dup(self, arr:list, new: dict):
         for data in arr:
-            if data['input'] == new['input'] and data['label'] == new['label']:
+            if data['input'] == new['input'] and (self.form == 't5' and data['label'] == new['label']):
                 return True
         return False
 
@@ -222,30 +229,35 @@ class GameDialogueDatas:
 
         return datas
 
-    def __init__(self):
+    def __init__(self, form:str):
         self.load_changes()
         self.load_dialogues()
+        self.form = form
         # print(self.unmatches)
 
 class GameDialogueDataset(Dataset):
-    def __init__(self, tokenizer, kor:bool = True, eng:bool = False):
-        gdd = GameDialogueDatas()
+    def __init__(self, tokenizer, kor:bool = True, eng:bool = False, form:str = 't5'):
+        gdd = GameDialogueDatas(form=form)
         self.tokenizer = tokenizer
         self.datas = gdd.get_datas(need_korean=kor, need_english=eng)
+        self.form = form
 
     def __getitem__(self, item):
         data = self.datas[item]
         inputs = data['input']
-        outputs = data['label']
-        # print(f'{inputs} -> {outputs}')
         input_text = self.tokenizer(inputs, max_length=128, padding='max_length', truncation=True, return_tensors='pt')
-        label_text = self.tokenizer(outputs, max_length=256, padding='max_length', truncation=True, return_tensors='pt')
-
-        return {
+        tens = {
             'input_ids': input_text.input_ids.squeeze(0),
             'attention_mask': input_text.attention_mask.squeeze(0),
-            'labels': label_text.input_ids.squeeze(0)
         }
+
+        if self.form == 't5':
+            outputs = data['label']
+            label_text = self.tokenizer(outputs, max_length=256, padding='max_length', truncation=True,
+                                        return_tensors='pt')
+            tens['labels'] = label_text.input_ids.squeeze(0)
+
+        return tens
 
     def __len__(self):
         return len(self.datas)
